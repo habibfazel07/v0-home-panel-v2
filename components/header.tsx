@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Menu, X, ArrowRight } from "lucide-react"
@@ -26,10 +27,14 @@ export function Header() {
             href="/" 
             className="flex items-center gap-2.5 group"
           >
-            <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center">
-              <span className="text-background font-bold text-sm">HP</span>
-            </div>
-            <span className="font-semibold text-base tracking-tight">HomePanel</span>
+            <Image
+              src="/logo.svg"
+              alt="HomePanel"
+              width={140}
+              height={32}
+              className="h-8 w-auto"
+              priority
+            />
           </Link>
 
           {/* Desktop nav */}
