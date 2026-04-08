@@ -1,6 +1,5 @@
 "use client"
 
-import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import {
   Users,
@@ -54,21 +53,20 @@ export function FeatureCard({ title, description, iconName, index = 0, className
   const Icon = iconMap[iconName]
   
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.4, delay: index * 0.1 }}
+    <div
       className={cn(
-        "group p-8 rounded-2xl bg-card border border-border hover:border-foreground/20 transition-colors",
+        "group p-6 lg:p-7 rounded-2xl bg-card border border-border",
+        "card-hover",
+        "opacity-0 animate-fade-in-up",
         className
       )}
+      style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
     >
-      <div className="h-12 w-12 rounded-xl bg-secondary flex items-center justify-center mb-6">
-        <Icon className="h-6 w-6 text-foreground" />
+      <div className="h-11 w-11 rounded-xl bg-secondary flex items-center justify-center mb-5">
+        <Icon className="h-5 w-5 text-foreground" />
       </div>
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-muted-foreground leading-relaxed">{description}</p>
-    </motion.div>
+      <h3 className="text-base font-semibold mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+    </div>
   )
 }
