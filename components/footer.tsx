@@ -1,124 +1,126 @@
 import Link from "next/link"
+import { Shield } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const footerLinks = {
-  product: [
-    { href: "/how-it-works", label: "How it Works" },
-    { href: "/start", label: "Get a Quote" },
-  ],
-  partners: [
-    { href: "/estate-agents", label: "Estate Agents" },
-    { href: "/brokers", label: "Mortgage Brokers" },
-    { href: "/solicitors", label: "Solicitors" },
-  ],
-  company: [
-    { href: "/contact", label: "Contact" },
-    { href: "#", label: "Privacy Policy" },
-    { href: "#", label: "Terms of Service" },
-  ],
+  services: {
+    title: "Services",
+    links: [
+      { href: "/how-it-works", label: "How it Works" },
+      { href: "/pricing", label: "Pricing" },
+      { href: "/start", label: "Get a Quote" },
+    ],
+  },
+  partners: {
+    title: "Partners",
+    links: [
+      { href: "/estate-agents", label: "Estate Agents" },
+      { href: "/brokers", label: "Mortgage Brokers" },
+      { href: "/solicitors", label: "Solicitors" },
+    ],
+  },
+  company: {
+    title: "Company",
+    links: [
+      { href: "/about", label: "About" },
+      { href: "/contact", label: "Contact" },
+      { href: "/careers", label: "Careers" },
+    ],
+  },
+  legal: {
+    title: "Legal",
+    links: [
+      { href: "/privacy", label: "Privacy Policy" },
+      { href: "/terms", label: "Terms of Service" },
+      { href: "/complaints", label: "Complaints" },
+    ],
+  },
 }
+
+const trustBadges = [
+  { label: "SRA Regulated" },
+  { label: "CQS Accredited" },
+  { label: "ICO Registered" },
+]
 
 export function Footer() {
   return (
     <footer className="border-t border-border bg-card">
-      <div className="mx-auto max-w-6xl px-6 lg:px-8 py-16 lg:py-20">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 lg:gap-12">
-          {/* Brand */}
-          <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <img 
-                src="/logo.svg" 
-                alt="HomePanel" 
-                className="h-8 w-8 transition-transform duration-200 group-hover:scale-105" 
-              />
-              <span className="font-semibold text-lg tracking-tight">HomePanel</span>
-            </Link>
-            <p className="mt-4 text-sm text-muted-foreground leading-relaxed max-w-xs">
-              Simplifying the home moving process with guided conveyancing onboarding.
-            </p>
-          </div>
-
-          {/* Product */}
-          <div>
-            <h3 className="font-medium text-sm mb-4">Product</h3>
-            <ul className="space-y-3">
-              {footerLinks.product.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className={cn(
-                      "text-sm text-muted-foreground",
-                      "hover:text-foreground",
-                      "transition-colors duration-200"
-                    )}
+      <div className="mx-auto max-w-6xl px-6 lg:px-8">
+        {/* Main footer content */}
+        <div className="py-12 lg:py-16">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
+            {/* Brand column */}
+            <div className="col-span-2 md:col-span-4 lg:col-span-1 mb-4 lg:mb-0">
+              <Link href="/" className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center">
+                  <span className="text-background font-bold text-sm">HP</span>
+                </div>
+                <span className="font-semibold tracking-tight">HomePanel</span>
+              </Link>
+              <p className="mt-4 text-sm text-muted-foreground leading-relaxed max-w-xs">
+                Making property transactions simpler, faster, and more transparent for everyone.
+              </p>
+              
+              {/* Trust badges */}
+              <div className="mt-6 flex flex-wrap gap-2">
+                {trustBadges.map((badge) => (
+                  <div 
+                    key={badge.label}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-secondary text-xs text-muted-foreground"
                   >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Partners */}
-          <div>
-            <h3 className="font-medium text-sm mb-4">Partners</h3>
-            <ul className="space-y-3">
-              {footerLinks.partners.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className={cn(
-                      "text-sm text-muted-foreground",
-                      "hover:text-foreground",
-                      "transition-colors duration-200"
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h3 className="font-medium text-sm mb-4">Company</h3>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className={cn(
-                      "text-sm text-muted-foreground",
-                      "hover:text-foreground",
-                      "transition-colors duration-200"
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                    <Shield className="h-3 w-3" />
+                    {badge.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Link columns */}
+            {Object.values(footerLinks).map((section) => (
+              <div key={section.title}>
+                <h3 className="text-sm font-semibold mb-4">{section.title}</h3>
+                <ul className="space-y-3">
+                  {section.links.map((link) => (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        className={cn(
+                          "text-sm text-muted-foreground",
+                          "hover:text-foreground transition-colors duration-200"
+                        )}
+                      >
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
-
+        
         {/* Bottom bar */}
-        <div className="mt-16 pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="border-t border-border py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            {new Date().getFullYear()} HomePanel. All rights reserved.
+            &copy; {new Date().getFullYear()} HomePanel. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <Link 
-              href="#" 
+              href="https://twitter.com/homepanel" 
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              LinkedIn
-            </Link>
-            <Link 
-              href="#" 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               Twitter
+            </Link>
+            <Link 
+              href="https://linkedin.com/company/homepanel" 
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              LinkedIn
             </Link>
           </div>
         </div>
