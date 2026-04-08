@@ -151,10 +151,10 @@ export default function HomePage() {
               key={step.number}
               className={cn(
                 "relative p-6 rounded-2xl bg-background border border-border",
-                "opacity-0 animate-fade-in-up",
+                "animate-fade-in-up",
                 "card-hover"
               )}
-              style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
+              style={{ animationDelay: `${index * 100}ms` }}
             >
               <div className="text-4xl font-light text-muted-foreground/30 mb-4">
                 {step.number}
@@ -213,9 +213,9 @@ export default function HomePage() {
                     "group flex items-start gap-5 p-6 rounded-2xl",
                     "bg-card border border-border",
                     "card-hover",
-                    "opacity-0 animate-fade-in-up"
+                    "animate-fade-in-up"
                   )}
-                  style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
+                  style={{ animationDelay: `${index * 100}ms` }}
                 >
                   <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center shrink-0">
                     <Icon className="w-6 h-6 text-foreground" />

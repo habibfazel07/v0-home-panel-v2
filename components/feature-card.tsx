@@ -57,10 +57,10 @@ export function FeatureCard({ title, description, iconName, index = 0, className
       className={cn(
         "group p-6 lg:p-7 rounded-2xl bg-card border border-border",
         "card-hover",
-        "opacity-0 animate-fade-in-up",
+        "animate-fade-in-up",
         className
       )}
-      style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'forwards' }}
+      style={{ animationDelay: `${index * 100}ms` }}
     >
       <div className="h-11 w-11 rounded-xl bg-secondary flex items-center justify-center mb-5">
         <Icon className="h-5 w-5 text-foreground" />

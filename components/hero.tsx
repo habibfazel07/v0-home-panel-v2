@@ -34,8 +34,8 @@ export function Hero({
           {/* Optional badge */}
           {badge && (
             <div 
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-secondary text-sm text-muted-foreground mb-8 opacity-0 animate-fade-in"
-              style={{ animationDelay: '0ms', animationFillMode: 'forwards' }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-secondary text-sm text-muted-foreground mb-8 animate-fade-in"
+              style={{ animationDelay: '0ms' }}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-accent" />
               {badge}
@@ -44,24 +44,24 @@ export function Hero({
           
           {/* Title */}
           <h1 
-            className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-semibold tracking-tight leading-[1.08] opacity-0 animate-fade-in-up"
-            style={{ animationDelay: '50ms', animationFillMode: 'forwards' }}
+            className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-semibold tracking-tight leading-[1.08] animate-fade-in-up"
+            style={{ animationDelay: '50ms' }}
           >
             {title}
           </h1>
           
           {/* Subtitle */}
           <p 
-            className="mt-6 lg:mt-8 text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto text-pretty opacity-0 animate-fade-in-up"
-            style={{ animationDelay: '100ms', animationFillMode: 'forwards' }}
+            className="mt-6 lg:mt-8 text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto text-pretty animate-fade-in-up"
+            style={{ animationDelay: '100ms' }}
           >
             {subtitle}
           </p>
           
           {/* CTAs */}
           <div 
-            className="mt-10 lg:mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 opacity-0 animate-fade-in-up"
-            style={{ animationDelay: '150ms', animationFillMode: 'forwards' }}
+            className="mt-10 lg:mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up"
+            style={{ animationDelay: '150ms' }}
           >
             <Button 
               asChild 
