@@ -5,12 +5,12 @@ import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { 
-  CheckCircle2, 
-  Upload, 
-  ShieldCheck, 
-  Building2, 
-  FileText, 
+import {
+  CheckCircle2,
+  Upload,
+  ShieldCheck,
+  Building2,
+  FileText,
   ArrowRight,
   Loader2,
   User,
@@ -96,7 +96,7 @@ const DOCUMENT_TYPES = [
 export default function OnboardingPage() {
   const params = useParams()
   const token = params.token as string
-  
+
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -104,13 +104,13 @@ export default function OnboardingPage() {
   const [enquiry, setEnquiry] = useState<EnquiryData | null>(null)
   const [currentStep, setCurrentStep] = useState<OnboardingStep>("welcome")
   const [tokenError, setTokenError] = useState<"invalid" | "expired" | null>(null)
-  
+
   const [formData, setFormData] = useState({
     date_of_birth: "",
     current_address: "",
     ni_number: "",
   })
-  
+
   const [uploadedDocs, setUploadedDocs] = useState<{ name: string; type: string; url: string }[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadingType, setUploadingType] = useState<string | null>(null)
@@ -129,7 +129,7 @@ export default function OnboardingPage() {
       }
       const data = await res.json()
       setEnquiry(data.enquiry)
-      
+
       // Restore form data
       if (data.enquiry.onboarding_data?.personal_details) {
         setFormData({
@@ -138,12 +138,12 @@ export default function OnboardingPage() {
           ni_number: data.enquiry.onboarding_data.personal_details.ni_number || "",
         })
       }
-      
+
       // Restore uploaded docs
       if (data.enquiry.onboarding_data?.documents?.uploaded) {
         setUploadedDocs(data.enquiry.onboarding_data.documents.uploaded)
       }
-      
+
       // Determine current step based on progress
       determineCurrentStep(data.enquiry)
     } catch (err) {
@@ -216,15 +216,15 @@ export default function OnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, checkType: "aml" }),
       })
-      
+
       if (!res.ok) {
         const errData = await res.json()
         throw new Error(errData.error || "Failed to start identity verification")
       }
-      
+
       const data = await res.json()
       await saveProgress("id_verification", { started: true, started_at: new Date().toISOString(), provider: "credas" })
-      
+
       // Open Credas identity / AML journey in new tab
       const url = data.inviteUrl || data.url
       if (url) {
@@ -238,9 +238,9 @@ export default function OnboardingPage() {
   }
 
   const handleIdVerificationComplete = async () => {
-    const success = await saveProgress("id_verification", { 
+    const success = await saveProgress("id_verification", {
       started: true,
-      completed: true, 
+      completed: true,
       completed_at: new Date().toISOString(),
       provider: "credas"
     })
@@ -260,15 +260,15 @@ export default function OnboardingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, checkType: "source_of_funds" }),
       })
-      
+
       if (!res.ok) {
         const errData = await res.json()
         throw new Error(errData.error || "Failed to start source of funds check")
       }
-      
+
       const data = await res.json()
       await saveProgress("source_of_funds", { started: true, started_at: new Date().toISOString(), provider: "credas" })
-      
+
       // Open Credas source of funds journey in new tab
       const url = data.inviteUrl || data.url
       if (url) {
@@ -282,9 +282,9 @@ export default function OnboardingPage() {
   }
 
   const handleSourceOfFundsComplete = async () => {
-    const success = await saveProgress("source_of_funds", { 
+    const success = await saveProgress("source_of_funds", {
       started: true,
-      completed: true, 
+      completed: true,
       completed_at: new Date().toISOString(),
       provider: "credas"
     })
@@ -298,27 +298,27 @@ export default function OnboardingPage() {
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {
     const file = e.target.files?.[0]
     if (!file) return
-    
+
     setUploading(true)
     setUploadingType(docType)
     setError(null)
-    
+
     try {
       const formDataObj = new FormData()
       formDataObj.append("file", file)
       formDataObj.append("token", token)
       formDataObj.append("documentType", docType)
-      
+
       const res = await fetch("/api/onboarding/upload", {
         method: "POST",
         body: formDataObj,
       })
-      
+
       if (!res.ok) {
         const errData = await res.json()
         throw new Error(errData.error || "Upload failed")
       }
-      
+
       const data = await res.json()
       const newDoc = { name: file.name, type: docType, url: data.url }
       const newDocs = [...uploadedDocs.filter(d => d.type !== docType), newDoc]
@@ -345,12 +345,12 @@ export default function OnboardingPage() {
     const requiredDocs = DOCUMENT_TYPES.filter(d => d.required)
     const uploadedTypes = uploadedDocs.map(d => d.type)
     const missingRequired = requiredDocs.filter(d => !uploadedTypes.includes(d.id))
-    
+
     if (missingRequired.length > 0) {
       setError(`Please upload required documents: ${missingRequired.map(d => d.label).join(", ")}`)
       return
     }
-    
+
     const success = await saveProgress("submit", { submitted_at: new Date().toISOString() })
     if (success) {
       setCurrentStep("complete")
@@ -360,7 +360,7 @@ export default function OnboardingPage() {
   const getStepStatus = (stepId: typeof steps[number]["id"]): "complete" | "current" | "upcoming" => {
     const stepIndex = steps.findIndex(s => s.id === stepId)
     const currentIndex = steps.findIndex(s => s.id === currentStep)
-    
+
     if (currentStep === "welcome") return "upcoming"
     if (currentStep === "complete") return "complete"
     if (stepIndex < currentIndex) return "complete"
@@ -396,7 +396,7 @@ export default function OnboardingPage() {
             {tokenError === "expired" ? "Link Expired" : "Invalid Link"}
           </h1>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            {tokenError === "expired" 
+            {tokenError === "expired"
               ? "This onboarding link has expired. Please contact your conveyancer to request a new link."
               : "This onboarding link is not valid. Please check the link or contact your conveyancer for assistance."
             }
@@ -414,7 +414,7 @@ export default function OnboardingPage() {
 
   // Get firm branding colors
   const firmColor = enquiry.firm?.brand_color || "#1a1a1a"
-  
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header - with firm branding if available */}
@@ -422,9 +422,9 @@ export default function OnboardingPage() {
         <div className="max-w-2xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             {enquiry.firm?.logo_url ? (
-              <img 
-                src={enquiry.firm.logo_url} 
-                alt={enquiry.firm.name} 
+              <img
+                src={enquiry.firm.logo_url}
+                alt={enquiry.firm.name}
                 className="h-8 w-auto object-contain"
               />
             ) : (
@@ -451,9 +451,8 @@ export default function OnboardingPage() {
       {/* Success/Error toast */}
       {(successMessage || error) && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className={`px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 ${
-            successMessage ? "bg-accent text-white" : "bg-destructive text-white"
-          }`}>
+          <div className={`px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 ${successMessage ? "bg-accent text-white" : "bg-destructive text-white"
+            }`}>
             {successMessage ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
             <span className="text-sm font-medium">{successMessage || error}</span>
             <button onClick={() => { setSuccessMessage(null); setError(null) }} className="ml-2">
@@ -473,27 +472,24 @@ export default function OnboardingPage() {
                 return (
                   <li key={step.id} className="flex items-center flex-1">
                     <div className="flex flex-col items-center w-full">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                        status === "complete" ? "bg-accent text-white" :
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${status === "complete" ? "bg-accent text-white" :
                         status === "current" ? "bg-foreground text-background ring-4 ring-foreground/10" :
-                        "bg-muted text-muted-foreground"
-                      }`}>
+                          "bg-muted text-muted-foreground"
+                        }`}>
                         {status === "complete" ? (
                           <Check className="h-5 w-5" />
                         ) : (
                           <step.icon className="h-5 w-5" />
                         )}
                       </div>
-                      <span className={`mt-2 text-xs font-medium text-center ${
-                        status === "current" ? "text-foreground" : "text-muted-foreground"
-                      }`}>
+                      <span className={`mt-2 text-xs font-medium text-center ${status === "current" ? "text-foreground" : "text-muted-foreground"
+                        }`}>
                         {step.label}
                       </span>
                     </div>
                     {index < steps.length - 1 && (
-                      <div className={`h-0.5 w-full mx-2 -mt-6 ${
-                        getStepStatus(steps[index + 1].id) !== "upcoming" ? "bg-accent" : "bg-border"
-                      }`} />
+                      <div className={`h-0.5 w-full mx-2 -mt-6 ${getStepStatus(steps[index + 1].id) !== "upcoming" ? "bg-accent" : "bg-border"
+                        }`} />
                     )}
                   </li>
                 )
@@ -524,7 +520,7 @@ export default function OnboardingPage() {
                 <p className="font-medium capitalize">{enquiry.transaction_type?.replace(/-/g, " ")}</p>
               </div>
             </div>
-            
+
             <div className="bg-muted/50 rounded-2xl p-6 space-y-4">
               <p className="text-sm font-semibold">What you'll need</p>
               <ul className="space-y-3">
@@ -543,14 +539,14 @@ export default function OnboardingPage() {
               </ul>
             </div>
 
-            <Button 
+            <Button
               className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-medium"
               onClick={() => setCurrentStep("personal")}
             >
               Start Onboarding
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
-            
+
             <p className="text-center text-xs text-muted-foreground">
               Your information is encrypted and securely stored
             </p>
@@ -580,7 +576,7 @@ export default function OnboardingPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="dob" className="text-sm font-medium">
                   Date of Birth <span className="text-destructive">*</span>
@@ -594,7 +590,7 @@ export default function OnboardingPage() {
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="address" className="text-sm font-medium">
                   Current Address <span className="text-destructive">*</span>
@@ -608,7 +604,7 @@ export default function OnboardingPage() {
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="ni" className="text-sm font-medium">
                   National Insurance Number <span className="text-muted-foreground text-xs">(optional)</span>
@@ -623,7 +619,7 @@ export default function OnboardingPage() {
               </div>
             </div>
 
-            <Button 
+            <Button
               className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-medium"
               onClick={handlePersonalSubmit}
               disabled={saving || !formData.date_of_birth || !formData.current_address}
@@ -653,7 +649,7 @@ export default function OnboardingPage() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                 <p className="text-sm font-medium">What happens next:</p>
                 <ol className="text-sm text-muted-foreground space-y-1.5">
@@ -672,7 +668,7 @@ export default function OnboardingPage() {
                 </ol>
               </div>
 
-              <Button 
+              <Button
                 variant="outline"
                 className="w-full h-12 rounded-xl font-medium"
                 onClick={handleStartIdVerification}
@@ -683,13 +679,13 @@ export default function OnboardingPage() {
                 <ExternalLink className="h-4 w-4 ml-2" />
               </Button>
             </div>
-            
+
             <div className="flex items-start gap-3 text-sm text-muted-foreground bg-muted/50 rounded-xl p-4">
               <Info className="h-4 w-4 shrink-0 mt-0.5" />
               <p>Your identity verification is reviewed by our compliance team. This typically takes 1-2 business days.</p>
             </div>
 
-            <Button 
+            <Button
               className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-medium"
               onClick={handleIdVerificationComplete}
               disabled={saving}
@@ -719,7 +715,7 @@ export default function OnboardingPage() {
                   </p>
                 </div>
               </div>
-              
+
               <div className="bg-muted/50 rounded-xl p-4 space-y-2">
                 <p className="text-sm font-medium">What happens next:</p>
                 <ol className="text-sm text-muted-foreground space-y-1.5">
@@ -738,7 +734,7 @@ export default function OnboardingPage() {
                 </ol>
               </div>
 
-              <Button 
+              <Button
                 variant="outline"
                 className="w-full h-12 rounded-xl font-medium"
                 onClick={handleStartSourceOfFunds}
@@ -749,13 +745,13 @@ export default function OnboardingPage() {
                 <ExternalLink className="h-4 w-4 ml-2" />
               </Button>
             </div>
-            
+
             <div className="flex items-start gap-3 text-sm text-muted-foreground bg-muted/50 rounded-xl p-4">
               <Info className="h-4 w-4 shrink-0 mt-0.5" />
               <p>Your data is securely encrypted. We only see a summary report, not your full transaction history.</p>
             </div>
 
-            <Button 
+            <Button
               className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-medium"
               onClick={handleSourceOfFundsComplete}
               disabled={saving}
@@ -777,17 +773,15 @@ export default function OnboardingPage() {
               {DOCUMENT_TYPES.map((doc) => {
                 const uploaded = getDocumentStatus(doc.id)
                 return (
-                  <div 
-                    key={doc.id} 
-                    className={`bg-card border rounded-2xl p-5 transition-colors ${
-                      uploaded ? "border-accent bg-accent/5" : "border-border"
-                    }`}
+                  <div
+                    key={doc.id}
+                    className={`bg-card border rounded-2xl p-5 transition-colors ${uploaded ? "border-accent bg-accent/5" : "border-border"
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-4">
-                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
-                          uploaded ? "bg-accent text-white" : "bg-muted"
-                        }`}>
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${uploaded ? "bg-accent text-white" : "bg-muted"
+                          }`}>
                           {uploaded ? (
                             <Check className="h-5 w-5" />
                           ) : (
@@ -807,7 +801,7 @@ export default function OnboardingPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {uploaded && (
-                          <button 
+                          <button
                             onClick={() => handleRemoveDocument(doc.id)}
                             className="p-2 text-muted-foreground hover:text-destructive transition-colors"
                           >
@@ -822,11 +816,10 @@ export default function OnboardingPage() {
                             className="hidden"
                             disabled={uploading}
                           />
-                          <span className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-colors ${
-                            uploaded 
-                              ? "bg-muted text-muted-foreground hover:bg-muted/80" 
-                              : "bg-foreground text-background hover:bg-foreground/90"
-                          }`}>
+                          <span className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-colors ${uploaded
+                            ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                            : "bg-foreground text-background hover:bg-foreground/90"
+                            }`}>
                             {uploading && uploadingType === doc.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
@@ -842,7 +835,7 @@ export default function OnboardingPage() {
               })}
             </div>
 
-            <Button 
+            <Button
               className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-medium"
               onClick={() => setCurrentStep("review")}
               disabled={uploadedDocs.length === 0}
@@ -865,7 +858,7 @@ export default function OnboardingPage() {
               <div className="bg-card border border-border rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <p className="font-medium">Personal Details</p>
-                  <button 
+                  <button
                     onClick={() => setCurrentStep("personal")}
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
@@ -921,7 +914,7 @@ export default function OnboardingPage() {
               <div className="bg-card border border-border rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <p className="font-medium">Uploaded Documents</p>
-                  <button 
+                  <button
                     onClick={() => setCurrentStep("documents")}
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
@@ -941,13 +934,13 @@ export default function OnboardingPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-start gap-3 text-sm text-muted-foreground bg-muted/50 rounded-xl p-4">
               <Clock className="h-4 w-4 shrink-0 mt-0.5" />
               <p>After submission, our compliance team will review your application. You'll receive an email once the review is complete (typically 1-2 business days).</p>
             </div>
 
-            <Button 
+            <Button
               className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-medium"
               onClick={handleSubmitOnboarding}
               disabled={saving}
@@ -967,7 +960,7 @@ export default function OnboardingPage() {
             <p className="text-muted-foreground max-w-sm mx-auto leading-relaxed mb-8">
               Thank you for completing your onboarding. Our compliance team will review your application and be in touch within 1-2 business days.
             </p>
-            
+
             <div className="bg-card border border-border rounded-2xl p-6 text-left max-w-sm mx-auto">
               <p className="text-sm font-medium mb-3">What happens next?</p>
               <ol className="text-sm text-muted-foreground space-y-2">
@@ -988,7 +981,7 @@ export default function OnboardingPage() {
           </div>
         )}
       </main>
-      
+
       {/* Footer */}
       <footer className="border-t border-border py-6 mt-auto">
         <div className="max-w-2xl mx-auto px-6">
