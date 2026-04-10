@@ -211,11 +211,10 @@ export default function OnboardingPage() {
     setSaving(true)
     setError(null)
     try {
-      // Call Armalytix API to get identity check URL
-      const res = await fetch("/api/onboarding/armalytix", {
+      const res = await fetch("/api/onboarding/credas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, checkType: "identity" }),
+        body: JSON.stringify({ token, checkType: "aml" }),
       })
       
       if (!res.ok) {
@@ -224,11 +223,12 @@ export default function OnboardingPage() {
       }
       
       const data = await res.json()
-      await saveProgress("id_verification", { started: true, started_at: new Date().toISOString(), provider: "armalytix" })
+      await saveProgress("id_verification", { started: true, started_at: new Date().toISOString(), provider: "credas" })
       
-      // Open Armalytix identity verification in new window
-      if (data.url) {
-        window.open(data.url, "_blank")
+      // Open Credas identity / AML journey in new tab
+      const url = data.inviteUrl || data.url
+      if (url) {
+        window.open(url, "_blank")
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start verification")
@@ -242,7 +242,7 @@ export default function OnboardingPage() {
       started: true,
       completed: true, 
       completed_at: new Date().toISOString(),
-      provider: "armalytix"
+      provider: "credas"
     })
     if (success) {
       setSuccessMessage("Identity verification marked as complete")
@@ -255,8 +255,7 @@ export default function OnboardingPage() {
     setSaving(true)
     setError(null)
     try {
-      // Call Armalytix API to get source of funds check URL
-      const res = await fetch("/api/onboarding/armalytix", {
+      const res = await fetch("/api/onboarding/credas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, checkType: "source_of_funds" }),
@@ -268,11 +267,12 @@ export default function OnboardingPage() {
       }
       
       const data = await res.json()
-      await saveProgress("source_of_funds", { started: true, started_at: new Date().toISOString(), provider: "armalytix" })
+      await saveProgress("source_of_funds", { started: true, started_at: new Date().toISOString(), provider: "credas" })
       
-      // Open Armalytix source of funds in new window
-      if (data.url) {
-        window.open(data.url, "_blank")
+      // Open Credas source of funds journey in new tab
+      const url = data.inviteUrl || data.url
+      if (url) {
+        window.open(url, "_blank")
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start verification")
@@ -286,7 +286,7 @@ export default function OnboardingPage() {
       started: true,
       completed: true, 
       completed_at: new Date().toISOString(),
-      provider: "armalytix"
+      provider: "credas"
     })
     if (success) {
       setSuccessMessage("Source of funds verification marked as complete")
