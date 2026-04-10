@@ -20,16 +20,21 @@ const CREDAS_API_KEY = process.env.CREDAS_API_KEY
 // Use sandbox environment if no API key or if using demo URL
 const IS_SANDBOX = !CREDAS_API_KEY || CREDAS_BASE_URL.includes("credasdemo")
 
-// Journey IDs from Credas documentation
-// https://apisupport.credas.com/support/solutions/articles/44002516314-public-journeyids-and-actorids-api
+// Journey IDs for HomePanel account
+// Standard AML provided by Credas for HomePanel sandbox account
+// To get Source of Funds Journey ID, call: GET https://portal.credasdemo.com/api/v2/ci/journeys
 const JOURNEY_CONFIG = {
   identity: {
-    sandbox: { journeyId: "fae35444-2710-43db-98a0-23fbfeef6f8b", actorId: 42 },
-    production: { journeyId: "9429d6b1-de6e-4fac-8343-9a48c4d5534f", actorId: 110 },
+    // HomePanel sandbox credentials from Credas
+    sandbox: { journeyId: "5266c860-f7ec-455b-be7d-7399fc8e11a6", actorId: 17 },
+    // Production credentials - will be provided by Credas when going live
+    production: { journeyId: process.env.CREDAS_IDENTITY_JOURNEY_ID || "5266c860-f7ec-455b-be7d-7399fc8e11a6", actorId: 17 },
   },
   source_of_funds: {
-    sandbox: { journeyId: "8f67f12a-ebbb-4ad0-844f-7665c1380b07", actorId: 870 },
-    production: { journeyId: "bcc35c05-3633-4cb4-b5ba-6e911e7b2aad", actorId: 1032 },
+    // Source of Funds - get Journey ID from GET /v2/ci/journeys endpoint
+    // Using env var since it wasn't provided in the email
+    sandbox: { journeyId: process.env.CREDAS_SOF_JOURNEY_ID || "", actorId: parseInt(process.env.CREDAS_SOF_ACTOR_ID || "0", 10) },
+    production: { journeyId: process.env.CREDAS_SOF_JOURNEY_ID || "", actorId: parseInt(process.env.CREDAS_SOF_ACTOR_ID || "0", 10) },
   },
 }
 
