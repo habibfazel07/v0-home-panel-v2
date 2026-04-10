@@ -215,13 +215,13 @@ export function ComplianceReviewPanel({
           onClick={() => setExpandedCheck(expandedCheck === "identity" ? null : "identity")}
           className="w-full p-5 flex items-center justify-between hover:bg-muted/50 transition-colors"
         >
-          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
             <div className="w-11 h-11 rounded-xl bg-[#00A3E0]/10 flex items-center justify-center">
               <ShieldCheck className="h-5 w-5 text-[#00A3E0]" />
             </div>
             <div className="text-left">
               <p className="font-medium">Identity Verification</p>
-              <p className="text-sm text-muted-foreground">Provider: Yoti</p>
+              <p className="text-sm text-muted-foreground">Provider: Credas</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -322,13 +322,13 @@ export function ComplianceReviewPanel({
           onClick={() => setExpandedCheck(expandedCheck === "sof" ? null : "sof")}
           className="w-full p-5 flex items-center justify-between hover:bg-muted/50 transition-colors"
         >
-          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
             <div className="w-11 h-11 rounded-xl bg-[#6366F1]/10 flex items-center justify-center">
               <Building2 className="h-5 w-5 text-[#6366F1]" />
             </div>
             <div className="text-left">
               <p className="font-medium">Source of Funds</p>
-              <p className="text-sm text-muted-foreground">Provider: Armalytix</p>
+              <p className="text-sm text-muted-foreground">Provider: Credas</p>
             </div>
           </div>
           <div className="flex items-center gap-3">

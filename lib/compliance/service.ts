@@ -1,7 +1,7 @@
 /**
  * HomePanel v2 - Compliance Service Layer
  * Provider-agnostic compliance operations
- * Abstracts Armalytix, Yoti, Onfido, and manual review workflows
+ * Abstracts Credas, Yoti, Onfido, and manual review workflows
  */
 
 import { createAdminClient, logActivity, logAudit } from "@/lib/database"
@@ -138,7 +138,7 @@ export async function updateAmlReviewStatus(
 export async function createComplianceCase(
   request: CreateComplianceCaseRequest
 ): Promise<ComplianceProviderResponse> {
-  const provider = request.provider || PROVIDERS.ARMALYTIX
+  const provider = request.provider || PROVIDERS.CREDAS
 
   // Get or create AML review
   const review = await getOrCreateAmlReview(request.enquiryId, request.caseId)
@@ -154,8 +154,8 @@ export async function createComplianceCase(
 
   // Route to appropriate provider
   switch (provider) {
-    case PROVIDERS.ARMALYTIX:
-      return await createArmalytixCase(review.id, request)
+    case PROVIDERS.CREDAS:
+      return await createCredasCase(review.id, request)
     case PROVIDERS.YOTI:
       return await createYotiCase(review.id, request)
     case PROVIDERS.ONFIDO:
@@ -177,7 +177,7 @@ export async function createComplianceCase(
 export async function requestSourceOfFunds(
   request: SourceOfFundsRequest
 ): Promise<ComplianceProviderResponse> {
-  const provider = request.provider || PROVIDERS.ARMALYTIX
+  const provider = request.provider || PROVIDERS.CREDAS
 
   // Update review status to pending
   await updateAmlReviewStatus(request.reviewId, {
@@ -219,7 +219,7 @@ export async function requestSourceOfFunds(
 export async function requestIdVerification(
   request: IdVerificationRequest
 ): Promise<ComplianceProviderResponse> {
-  const provider = request.provider || PROVIDERS.ARMALYTIX
+  const provider = request.provider || PROVIDERS.CREDAS
 
   // Update review status to pending
   await updateAmlReviewStatus(request.reviewId, {
@@ -476,23 +476,23 @@ export async function getComplianceSummary(
 // These would contain actual API calls in production
 // ============================================================================
 
-async function createArmalytixCase(
+async function createCredasCase(
   reviewId: string,
   request: CreateComplianceCaseRequest
 ): Promise<ComplianceProviderResponse> {
-  // TODO: Implement actual Armalytix API integration
-  // For now, return a mock response
+  // Credas API integration is handled via /api/onboarding/credas route
+  // This function updates the internal review status
   
   await updateAmlReviewStatus(reviewId, {
-    provider: PROVIDERS.ARMALYTIX,
-    provider_reference: `ARM-${Date.now()}`,
+    provider: PROVIDERS.CREDAS,
+    provider_reference: `CREDAS-${Date.now()}`,
     status: "pending",
   })
 
   return {
     success: true,
-    provider: PROVIDERS.ARMALYTIX,
-    reference: `ARM-${Date.now()}`,
+    provider: PROVIDERS.CREDAS,
+    reference: `CREDAS-${Date.now()}`,
     status: "pending",
   }
 }

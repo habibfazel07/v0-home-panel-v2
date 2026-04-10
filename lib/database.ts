@@ -295,7 +295,7 @@ export const CHECK_TYPES = {
 // Provider names
 export const PROVIDERS = {
   YOTI: "yoti",
-  ARMALYTIX: "armalytix",
+  CREDAS: "credas",
 } as const
 
 // Document types for compliance
