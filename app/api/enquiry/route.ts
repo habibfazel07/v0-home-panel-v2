@@ -106,22 +106,27 @@ export async function POST(request: Request) {
       let newEnquiry = null
       let dbError = null
       
+      console.log("[v0] Attempting full insert with terms/consent fields...")
+      
       // Try full insert first
       const fullResult = await supabase.from("enquiries").insert(fullEnquiryData).select("id").single()
       
       if (fullResult.error?.message?.includes("column") || fullResult.error?.message?.includes("schema")) {
         // Fallback to base insert if new columns don't exist yet
-        console.log("[enquiry] New columns not available, using base insert")
+        console.log("[v0] New columns not available, using base insert. Error was:", fullResult.error?.message)
         const baseResult = await supabase.from("enquiries").insert(baseEnquiryData).select("id").single()
         newEnquiry = baseResult.data
         dbError = baseResult.error
       } else {
+        console.log("[v0] Full insert successful with terms/consent fields")
         newEnquiry = fullResult.data
         dbError = fullResult.error
       }
       
       if (dbError) {
-        console.error("[enquiry] DB insert error:", dbError.message)
+        console.error("[v0] DB insert error:", dbError.message)
+      } else {
+        console.log("[v0] Enquiry created successfully:", newEnquiry?.id)
       }
 
       // Log activity
