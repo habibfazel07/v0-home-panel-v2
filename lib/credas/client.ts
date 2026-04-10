@@ -123,6 +123,10 @@ export async function sendCredasInvite(
   request: CredasInviteRequest
 ): Promise<CredasInviteResponse> {
 
+  console.log("[credas] sendCredasInvite called")
+  console.log("[credas] CREDAS_BASE_URL:", CREDAS_BASE_URL)
+  console.log("[credas] CREDAS_API_KEY set:", Boolean(CREDAS_API_KEY))
+
   // Return demo invite if no API key configured
   if (!CREDAS_API_KEY) {
     console.warn("[credas] API key not configured — returning demo invite")
@@ -157,7 +161,19 @@ export async function sendCredasInvite(
 
     console.log("[credas] Request body:", JSON.stringify(requestBody, null, 2))
 
-    const response = await fetch(`${CREDAS_BASE_URL}/v2/ci/process`, {
+    // Credas API endpoint - ensure we use the correct path
+    // Base URL from env should be: https://portal.credasdemo.com/api (sandbox) or https://portal.credas.com/api (prod)
+    // But the Swagger docs show endpoints like: POST /api/v2/ci/process
+    // So if CREDAS_BASE_URL already ends with /api, we should NOT add /api again
+    
+    // Normalize the base URL - remove trailing /api if present since we'll add the full path
+    let baseUrl = CREDAS_BASE_URL.replace(/\/api\/?$/, "")
+    const endpoint = `${baseUrl}/api/v2/ci/process`
+    console.log("[credas] CREDAS_BASE_URL from env:", CREDAS_BASE_URL)
+    console.log("[credas] Normalized baseUrl:", baseUrl)
+    console.log("[credas] Calling endpoint:", endpoint)
+    
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: headers(),
       body: JSON.stringify(requestBody),
@@ -217,7 +233,8 @@ export async function getCredasStatus(processId: string): Promise<CredasStatusRe
   }
 
   try {
-    const response = await fetch(`${CREDAS_BASE_URL}/v2/ci/process/${processId}`, {
+    const baseUrl = CREDAS_BASE_URL.replace(/\/api\/?$/, "")
+    const response = await fetch(`${baseUrl}/api/v2/ci/process/${processId}`, {
       method: "GET",
       headers: headers(),
     })
@@ -261,7 +278,8 @@ export async function getCredasEntitySummary(entityId: string): Promise<{
   }
 
   try {
-    const response = await fetch(`${CREDAS_BASE_URL}/v2/ci/entities/${entityId}/summary`, {
+    const baseUrl = CREDAS_BASE_URL.replace(/\/api\/?$/, "")
+    const response = await fetch(`${baseUrl}/api/v2/ci/entities/${entityId}/summary`, {
       method: "GET",
       headers: headers(),
     })
