@@ -105,7 +105,7 @@ export interface CredasWebhookPayload {
 function headers(): Record<string, string> {
   return {
     "Content-Type": "application/json",
-    "Authorization": `Basic ${CREDAS_API_KEY}`,
+    "X-API-Key": CREDAS_API_KEY,
     "Accept": "application/json",
   }
 }
