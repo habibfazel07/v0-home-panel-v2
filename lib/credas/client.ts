@@ -7,22 +7,52 @@
  *   - Address verification
  *   - Source of funds        (open banking + document upload)
  *
- * Sandbox base URL : https://portal.credasdemo.com/api/
- * Live base URL    : https://portal.credas.com/api/        (set via env)
+ * Sandbox base URL : https://portal.credasdemo.com/api
+ * Live base URL    : https://portal.credas.com/api
  *
- * Docs  : https://portal.credasdemo.com/api/swagger
- * Support : support@credas.com
+ * Docs: https://portal.credas.com/swagger/index.html
+ * Support: https://apisupport.credas.com/
  */
 
 const CREDAS_BASE_URL = process.env.CREDAS_BASE_URL || "https://portal.credasdemo.com/api"
-const CREDAS_API_KEY  = process.env.CREDAS_API_KEY
+const CREDAS_API_KEY = process.env.CREDAS_API_KEY
 
-// Journey IDs — retrieved from GET /v2/ci/journeys
-// Defaults here are the sandbox values supplied by Credas.
-const CREDAS_AML_JOURNEY_ID = process.env.CREDAS_AML_JOURNEY_ID || "5266c860-f7ec-455b-be7d-7399fc8e11a6"
-const CREDAS_AML_ACTOR_ID   = parseInt(process.env.CREDAS_AML_ACTOR_ID || "17", 10)
-const CREDAS_SOF_JOURNEY_ID = process.env.CREDAS_SOF_JOURNEY_ID || "" // populate once retrieved
-const CREDAS_SOF_ACTOR_ID   = parseInt(process.env.CREDAS_SOF_ACTOR_ID || "0", 10)
+// Use sandbox environment if no API key or if using demo URL
+const IS_SANDBOX = !CREDAS_API_KEY || CREDAS_BASE_URL.includes("credasdemo")
+
+// Environment variables for Journey configuration
+// CREDAS_AML_JOURNEY_ID - Journey ID for Identity/AML verification
+// CREDAS_AML_ACTOR_ID - Actor ID for Identity/AML verification
+const CREDAS_AML_JOURNEY_ID = process.env.CREDAS_AML_JOURNEY_ID
+const CREDAS_AML_ACTOR_ID = process.env.CREDAS_AML_ACTOR_ID
+
+// Fallback values (HomePanel sandbox defaults from Credas email)
+const DEFAULT_AML_JOURNEY_ID = "5266c860-f7ec-455b-be7d-7399fc8e11a6"
+const DEFAULT_AML_ACTOR_ID = 17
+
+function getJourneyConfig(checkType: CredasCheckType) {
+  if (checkType === "aml") {
+    return {
+      journeyId: CREDAS_AML_JOURNEY_ID || DEFAULT_AML_JOURNEY_ID,
+      actorId: CREDAS_AML_ACTOR_ID ? parseInt(CREDAS_AML_ACTOR_ID, 10) : DEFAULT_AML_ACTOR_ID,
+    }
+  } else {
+    // Source of Funds - for now use the same AML journey until SOF journey is configured
+    // Contact Credas to get SOF journey ID, then add CREDAS_SOF_JOURNEY_ID env var
+    const sofJourneyId = process.env.CREDAS_SOF_JOURNEY_ID
+    const sofActorId = process.env.CREDAS_SOF_ACTOR_ID
+    
+    if (!sofJourneyId) {
+      console.warn("[credas] CREDAS_SOF_JOURNEY_ID not configured - Source of Funds checks will not work")
+      return { journeyId: "", actorId: 0 }
+    }
+    
+    return {
+      journeyId: sofJourneyId,
+      actorId: sofActorId ? parseInt(sofActorId, 10) : 0,
+    }
+  }
+}
 
 // ─────────────────────────────────────────────
 // Types
@@ -43,8 +73,10 @@ export interface CredasInviteRequest {
 
 export interface CredasInviteResponse {
   success: boolean
-  inviteId?: string     // Credas case / invite ID
-  inviteUrl?: string    // white-labelled URL to send the customer to
+  processId?: string    // Credas process ID
+  entityId?: string     // Credas entity ID
+  inviteId?: string     // Alias for processId
+  inviteUrl?: string    // Magic link URL to send the customer to
   error?: string
 }
 
@@ -60,20 +92,10 @@ export interface CredasStatusResponse {
 }
 
 export interface CredasWebhookPayload {
-  event: "invite.completed" | "invite.failed" | "invite.expired" | "check.updated"
-  inviteId: string
-  referenceId: string
-  journeyId: string
-  status: "complete" | "failed" | "expired"
-  riskLevel?: "low" | "medium" | "high"
-  checks?: {
-    identity?: { status: string; passed: boolean }
-    aml?:      { status: string; passed: boolean; pepMatch: boolean; sanctionsMatch: boolean }
-    address?:  { status: string; passed: boolean }
-    sof?:      { status: string; passed: boolean }
-  }
-  completedAt?: string
-  metadata?: Record<string, unknown>
+  ProcessId: string
+  ClientId: string
+  Status: number       // 2 = complete
+  StatusDescription: string
 }
 
 // ─────────────────────────────────────────────
@@ -82,9 +104,9 @@ export interface CredasWebhookPayload {
 
 function headers(): Record<string, string> {
   return {
-    "Content-Type":  "application/json",
+    "Content-Type": "application/json",
     "Authorization": `Bearer ${CREDAS_API_KEY}`,
-    "Accept":        "application/json",
+    "Accept": "application/json",
   }
 }
 
@@ -93,103 +115,163 @@ export function isCredasConfigured(): boolean {
 }
 
 // ─────────────────────────────────────────────
-// Send a Credas invite to a client
+// Create a Credas Process (send invite to client)
+// POST /api/v2/ci/process
 // ─────────────────────────────────────────────
 
 export async function sendCredasInvite(
   request: CredasInviteRequest
 ): Promise<CredasInviteResponse> {
 
+  // Return demo invite if no API key configured
   if (!CREDAS_API_KEY) {
-    console.warn("[credas] API key not configured — returning sandbox demo invite")
+    console.warn("[credas] API key not configured — returning demo invite")
     return buildDemoInvite(request)
   }
 
-  const isAml = request.checkType === "aml"
-  const journeyId = isAml ? CREDAS_AML_JOURNEY_ID : CREDAS_SOF_JOURNEY_ID
-  const actorId   = isAml ? CREDAS_AML_ACTOR_ID   : CREDAS_SOF_ACTOR_ID
+  const { journeyId, actorId } = getJourneyConfig(request.checkType)
 
-  if (!journeyId) {
-    return { success: false, error: `Journey ID not configured for check type: ${request.checkType}` }
-  }
+  console.log("[credas] Creating process with journeyId:", journeyId, "actorId:", actorId)
 
   try {
-    /**
-     * POST /v2/ci/invites
-     * Sends a white-labelled Credas invite to the customer.
-     * The customer clicks the link in their email / SMS and completes the journey.
-     */
-    const response = await fetch(`${CREDAS_BASE_URL}/v2/ci/invites`, {
-      method:  "POST",
-      headers: headers(),
-      body: JSON.stringify({
-        journey_id:   journeyId,
-        actor_id:     actorId,
-        first_name:   request.firstName,
-        last_name:    request.lastName,
-        email:        request.email,
-        phone_number: request.phone || undefined,
-        reference:    request.referenceId,
-        redirect_url: request.redirectUrl || undefined,
-        webhook_url:  request.webhookUrl  || undefined,
-        metadata: {
-          homepanel_enquiry_id: request.referenceId,
-          check_type: request.checkType,
+    // Build request body per Credas API documentation
+    // https://apisupport.credas.com/support/solutions/articles/44002478495-create-a-new-process-api
+    const requestBody = {
+      title: `HomePanel - ${request.checkType === "aml" ? "Identity Verification" : "Source of Funds"} - ${request.referenceId}`,
+      journeyId: journeyId,
+      webhookUrl: request.webhookUrl || undefined,
+      processEntities: [
+        {
+          firstName: request.firstName,
+          surname: request.lastName,
+          emailAddress: request.email,
+          phoneNumber: request.phone || undefined,
+          reference: request.referenceId,
+          actorId: actorId,
+          contactViaEmail: true,
+          contactViaSms: Boolean(request.phone),
+          inPerson: false,
         },
-      }),
+      ],
+    }
+
+    console.log("[credas] Request body:", JSON.stringify(requestBody, null, 2))
+
+    const response = await fetch(`${CREDAS_BASE_URL}/v2/ci/process`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify(requestBody),
     })
 
+    const responseText = await response.text()
+    console.log("[credas] Response status:", response.status)
+    console.log("[credas] Response body:", responseText)
+
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}))
-      console.error("[credas] sendInvite error:", response.status, err)
-      return { success: false, error: err?.message || `Credas API error: ${response.status}` }
+      let errorMessage = `Credas API error: ${response.status}`
+      try {
+        const errorData = JSON.parse(responseText)
+        errorMessage = errorData.message || errorData.title || errorData.error || errorMessage
+      } catch {
+        // Use status text if can't parse JSON
+        errorMessage = `Credas API error: ${response.status} - ${response.statusText}`
+      }
+      console.error("[credas] API error:", errorMessage)
+      return { success: false, error: errorMessage }
     }
 
-    const data = await response.json()
+    const data = JSON.parse(responseText)
+
+    // Extract processId and entityId from response
+    const processId = data.id
+    const entityId = data.processActors?.[0]?.entityId
+
+    // Build magic link URL for the customer
+    // Format: https://portal.credas.com/invite/{processId}
+    const basePortalUrl = CREDAS_BASE_URL.replace("/api", "")
+    const inviteUrl = `${basePortalUrl}/invite/${processId}`
+
+    console.log("[credas] Process created successfully:", { processId, entityId, inviteUrl })
 
     return {
-      success:   true,
-      inviteId:  data.id       || data.invite_id,
-      inviteUrl: data.url      || data.invite_url,
+      success: true,
+      processId: processId,
+      entityId: entityId,
+      inviteId: processId, // Alias for compatibility
+      inviteUrl: inviteUrl,
     }
   } catch (err) {
-    console.error("[credas] sendInvite exception:", err)
+    console.error("[credas] Exception:", err)
     return { success: false, error: err instanceof Error ? err.message : "Request failed" }
   }
 }
 
 // ─────────────────────────────────────────────
-// Poll invite / case status
+// Get Process/Entity status
+// GET /api/v2/ci/process/{processId}
 // ─────────────────────────────────────────────
 
-export async function getCredasStatus(inviteId: string): Promise<CredasStatusResponse> {
+export async function getCredasStatus(processId: string): Promise<CredasStatusResponse> {
   if (!CREDAS_API_KEY) {
     return { success: true, status: "pending" }
   }
 
   try {
-    const response = await fetch(`${CREDAS_BASE_URL}/v2/ci/invites/${inviteId}`, {
+    const response = await fetch(`${CREDAS_BASE_URL}/v2/ci/process/${processId}`, {
       method: "GET",
       headers: headers(),
     })
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "")
-      console.error(`[credas] getStatus error: ${response.status} ${response.statusText}`, errorBody)
+      console.error(`[credas] getStatus error: ${response.status}`, errorBody)
       return { success: false, error: `Credas API error: ${response.status}` }
     }
 
     const data = await response.json()
 
+    // Map Credas status to our status
+    let status: CredasStatusResponse["status"] = "pending"
+    if (data.status === 2) status = "complete"
+    else if (data.status === 1) status = "in_progress"
+    else if (data.status === 3) status = "failed"
+
     return {
-      success:        true,
-      status:         data.status,
-      identityStatus: data.checks?.identity?.status,
-      amlStatus:      data.checks?.aml?.status,
-      sofStatus:      data.checks?.sof?.status,
-      riskLevel:      data.risk_level,
-      completedAt:    data.completed_at,
+      success: true,
+      status: status,
+      completedAt: data.completedAt,
     }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Request failed" }
+  }
+}
+
+// ─────────────────────────────────────────────
+// Get Entity summary (results)
+// GET /api/v2/ci/entities/{entityId}/summary
+// ─────────────────────────────────────────────
+
+export async function getCredasEntitySummary(entityId: string): Promise<{
+  success: boolean
+  data?: Record<string, unknown>
+  error?: string
+}> {
+  if (!CREDAS_API_KEY) {
+    return { success: false, error: "API key not configured" }
+  }
+
+  try {
+    const response = await fetch(`${CREDAS_BASE_URL}/v2/ci/entities/${entityId}/summary`, {
+      method: "GET",
+      headers: headers(),
+    })
+
+    if (!response.ok) {
+      return { success: false, error: `Credas API error: ${response.status}` }
+    }
+
+    const data = await response.json()
+    return { success: true, data }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Request failed" }
   }
@@ -197,7 +279,6 @@ export async function getCredasStatus(inviteId: string): Promise<CredasStatusRes
 
 // ─────────────────────────────────────────────
 // Validate incoming webhook signature
-// Uses HMAC-SHA256 — Credas sends X-Credas-Signature header
 // ─────────────────────────────────────────────
 
 export function validateCredasWebhook(
@@ -228,7 +309,13 @@ export function validateCredasWebhook(
 // ─────────────────────────────────────────────
 
 function buildDemoInvite(request: CredasInviteRequest): CredasInviteResponse {
-  const id  = `CREDAS-DEMO-${Date.now().toString(36).toUpperCase()}`
-  const url = `https://portal.credasdemo.com/invite/demo?ref=${id}&type=${request.checkType}`
-  return { success: true, inviteId: id, inviteUrl: url }
+  const processId = `DEMO-${Date.now().toString(36).toUpperCase()}`
+  const url = `https://portal.credasdemo.com/invite/demo?ref=${processId}&type=${request.checkType}`
+  return {
+    success: true,
+    processId: processId,
+    entityId: `ENTITY-${processId}`,
+    inviteId: processId,
+    inviteUrl: url,
+  }
 }
