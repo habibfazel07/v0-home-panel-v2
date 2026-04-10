@@ -32,7 +32,7 @@ import {
 // TYPES & CONSTANTS
 // ============================================================================
 
-type StepType =
+type StepType = 
   | "terms-conditions"
   | "product-interests"
   | "transaction-type"
@@ -167,9 +167,9 @@ function calculateFees(data: Partial<EnquiryFormData>) {
     isAdditional,
     transactionLabel:
       transactionType === "buying" ? "purchase" :
-        transactionType === "selling" ? "sale" :
-          transactionType === "buying-selling" ? "purchase & sale" :
-            transactionType === "remortgage" ? "remortgage" : "transfer of equity"
+      transactionType === "selling" ? "sale" :
+      transactionType === "buying-selling" ? "purchase & sale" :
+      transactionType === "remortgage" ? "remortgage" : "transfer of equity"
   }
 }
 
@@ -179,7 +179,7 @@ function calculateFees(data: Partial<EnquiryFormData>) {
 
 function getStepsForTransaction(transactionType: string): StepType[] {
   const preSteps: StepType[] = ["terms-conditions", "product-interests", "transaction-type"]
-
+  
   if (transactionType === "buying" || transactionType === "buying-selling") {
     return [
       ...preSteps,
@@ -198,7 +198,7 @@ function getStepsForTransaction(transactionType: string): StepType[] {
       "quote",
     ]
   }
-
+  
   if (transactionType === "selling") {
     return [
       ...preSteps,
@@ -211,7 +211,7 @@ function getStepsForTransaction(transactionType: string): StepType[] {
       "quote",
     ]
   }
-
+  
   if (transactionType === "remortgage") {
     return [
       ...preSteps,
@@ -223,7 +223,7 @@ function getStepsForTransaction(transactionType: string): StepType[] {
       "quote",
     ]
   }
-
+  
   if (transactionType === "transfer-equity") {
     return [
       ...preSteps,
@@ -236,7 +236,7 @@ function getStepsForTransaction(transactionType: string): StepType[] {
       "quote",
     ]
   }
-
+  
   return preSteps
 }
 
@@ -286,12 +286,12 @@ export function MultiStepForm() {
 
   const { handleSubmit, watch, setValue, formState: { errors }, trigger } = form
   const watchedValues = watch()
-
-  const steps = useMemo(() =>
+  
+  const steps = useMemo(() => 
     getStepsForTransaction(watchedValues.transactionType),
     [watchedValues.transactionType]
   )
-
+  
   const currentStep = steps[currentStepIndex] || "terms-conditions"
   const totalSteps = steps.length || 1
 
@@ -362,14 +362,14 @@ export function MultiStepForm() {
   const onSubmit = async (data: EnquiryFormData) => {
     setIsSubmitting(true)
     setError(null)
-
+    
     try {
       const response = await fetch("/api/enquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
-
+      
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Something went wrong. Please try again.")
@@ -389,7 +389,7 @@ export function MultiStepForm() {
 
   const handleDecline = async () => {
     setShowFeedbackForm(true)
-
+    
     try {
       await fetch("/api/enquiry/decline", {
         method: "POST",
@@ -504,7 +504,7 @@ export function MultiStepForm() {
             Back
           </Button>
         </div>
-
+        
         {/* Progress */}
         <div className="px-6 pt-4">
           <ProgressIndicator
@@ -868,7 +868,7 @@ function TransactionTypeStep({
           <li className="underline decoration-dotted underline-offset-4">in the industry.</li>
         </ul>
       </div>
-
+      
       <FormField label="What would you like a quote for?" className="text-center">
         <RadioCardGroup
           options={transactionTypes.map(t => ({ value: t.value, label: t.label }))}
@@ -901,13 +901,13 @@ function PropertyAddressStep({
   onAddressUnknownChange: (checked: boolean) => void
 }) {
   const action = transactionType === "selling" ? "selling" : "buying"
-
+  
   return (
     <div className="space-y-6">
       <StepHeader
         title={`What is the address of the property you are ${action}?`}
       />
-
+      
       <FormField>
         <AddressAutocomplete
           value={addressData}
@@ -917,7 +917,7 @@ function PropertyAddressStep({
           disabled={addressUnknown}
         />
       </FormField>
-
+      
       <div className="flex items-center gap-3">
         <Checkbox
           id="addressUnknown"
@@ -942,11 +942,11 @@ function TenureStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Is it a Freehold or Leasehold property?" />
-
+      
       <InfoBox>
         Most houses are <strong className="text-foreground">Freehold</strong> and most flats are <strong className="text-foreground">Leasehold</strong>. If you are buying through an Estate Agent they should be able to make you aware.
       </InfoBox>
-
+      
       <RadioCardGroup
         options={tenureTypes.map(t => ({ value: t.value, label: t.label }))}
         value={value}
@@ -968,7 +968,7 @@ function PropertyValueStep({
   return (
     <div className="space-y-6">
       <StepHeader title="How much will you be paying (approximately)?" />
-
+      
       <FormField>
         <TextInput
           prefix="£"
@@ -993,7 +993,7 @@ function OwnerCountStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Including you, how many people will own this property?" />
-
+      
       <RadioCardGroup
         options={ownerCountOptions.map(o => ({ value: o.value, label: o.label }))}
         value={value}
@@ -1015,11 +1015,11 @@ function FirstTimeBuyerStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Will this be the first property you have all ever owned?" />
-
+      
       <InfoBox>
         You could be considered a first time buyer if you have never owned or part owned a property anywhere in the world. <strong className="text-foreground">If any of the new owners have then you should answer &quot;No&quot;.</strong>
       </InfoBox>
-
+      
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes, we are all first time buyers" },
@@ -1044,7 +1044,7 @@ function PropertyCountStep({
   return (
     <div className="space-y-6">
       <StepHeader title="When your purchase completes how many properties will you all own?" />
-
+      
       <RadioCardGroup
         options={propertyCountOptions.map(o => ({ value: o.value, label: o.label }))}
         value={value}
@@ -1066,7 +1066,7 @@ function NewBuildStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Is this a new build property?" />
-
+      
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes" },
@@ -1091,7 +1091,7 @@ function MortgageStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Will you be getting a mortgage?" />
-
+      
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes" },
@@ -1116,11 +1116,11 @@ function CompanyPurchaseStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Are you buying under a company name?" />
-
+      
       <InfoBox>
         This could be a limited company (LTD), partnership or any other company.
       </InfoBox>
-
+      
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes" },
@@ -1145,11 +1145,11 @@ function GiftFundsStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Will someone be giving you money to help with the purchase?" />
-
+      
       <InfoBox>
         This could be a friend or relative who is helping with the deposit or the price of the property. But this does not include anyone who will also be an owner of the property.
       </InfoBox>
-
+      
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes" },
@@ -1174,7 +1174,7 @@ function BankFundsOnlyStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Will you be paying for the property using only funds in your bank account?" />
-
+      
       <InfoBox>
         You only need to answer &quot;Yes&quot; if 100% of the funds for this property are coming from cash that someone already has.
         <br /><br />
@@ -1184,7 +1184,7 @@ function BankFundsOnlyStep({
           <li>You are selling another property that will pay for this one.</li>
         </ul>
       </InfoBox>
-
+      
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes" },
@@ -1213,7 +1213,7 @@ function PersonalDetailsStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Tell us about yourself" />
-
+      
       <div className="space-y-4">
         <FormField label="First name" required error={errors.firstName?.message}>
           <TextInput
@@ -1224,7 +1224,7 @@ function PersonalDetailsStep({
             error={!!errors.firstName}
           />
         </FormField>
-
+        
         <FormField label="Last name" required error={errors.lastName?.message}>
           <TextInput
             value={values.lastName}
@@ -1234,7 +1234,7 @@ function PersonalDetailsStep({
             error={!!errors.lastName}
           />
         </FormField>
-
+        
         <FormField label="Email address" required error={errors.email?.message}>
           <TextInput
             type="email"
@@ -1245,7 +1245,7 @@ function PersonalDetailsStep({
             error={!!errors.email}
           />
         </FormField>
-
+        
         <FormField label="Phone number" required error={errors.phone?.message}>
           <TextInput
             type="tel"
@@ -1267,25 +1267,25 @@ function QuoteStep({
   values: EnquiryFormData
 }) {
   const fees = calculateFees(values)
-
+  
   return (
     <div className="text-center">
       <img src="/logo.svg" alt="HomePanel" className="w-12 h-12 mx-auto mb-4" />
-
+      
       <h2 className="text-xl font-semibold mb-1">
         If you let us handle this
       </h2>
       <p className="text-xl font-semibold mb-6">
         journey for you
       </p>
-
+      
       <p className="text-muted-foreground mb-2">
         Our fee for your {fees.transactionLabel} would be:
       </p>
       <p className="text-4xl font-bold mb-8">
         £{fees.total.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </p>
-
+      
       {/* Fee breakdown */}
       <div className="text-left bg-muted/50 rounded-xl p-5 mb-8">
         <h3 className="font-medium mb-4 text-sm">Fee breakdown</h3>
@@ -1359,12 +1359,12 @@ function QuoteStep({
           )}
         </div>
       </div>
-
+      
       {/* Agents */}
       <p className="text-muted-foreground mb-4">
         Your case would directly be handled by
       </p>
-
+      
       <div className="flex items-center justify-center gap-6 mb-4">
         {agents.map((agent, index) => (
           <div key={agent.name} className="flex items-center gap-4">
@@ -1373,8 +1373,8 @@ function QuoteStep({
             )}
             <div className="text-center">
               <div className="w-16 h-16 rounded-full bg-muted mx-auto mb-2 overflow-hidden">
-                <img
-                  src={agent.image}
+                <img 
+                  src={agent.image} 
                   alt={agent.name}
                   className="w-full h-full object-cover"
                 />
@@ -1385,7 +1385,7 @@ function QuoteStep({
           </div>
         ))}
       </div>
-
+      
       <p className="text-sm text-muted-foreground">
         Experts in their field.
       </p>
@@ -1422,8 +1422,8 @@ function FeedbackForm({
   const [otherReason, setOtherReason] = useState("")
 
   const toggleReason = (reasonId: string) => {
-    setSelectedReasons(prev =>
-      prev.includes(reasonId)
+    setSelectedReasons(prev => 
+      prev.includes(reasonId) 
         ? prev.filter(r => r !== reasonId)
         : [...prev, reasonId]
     )
