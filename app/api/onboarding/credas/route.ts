@@ -6,9 +6,35 @@
  * identity verification or source of funds verification.
  */
 
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient, logActivity } from "@/lib/database"
 import { sendCredasInvite, isCredasConfigured } from "@/lib/credas"
+
+/**
+ * GET /api/onboarding/credas?token=xxx
+ * Returns the current Credas invite status for an enquiry.
+ * Redirects to the status endpoint for actual status checking.
+ */
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const token = searchParams.get("token")
+  
+  if (!token) {
+    return NextResponse.json(
+      { error: "Token required. Use GET /api/onboarding/credas/status for status polling." },
+      { status: 400 }
+    )
+  }
+  
+  // Redirect to the proper status endpoint
+  return NextResponse.json(
+    { 
+      error: "Use POST to create an invite, or GET /api/onboarding/credas/status?token=xxx&checkType=aml for status",
+      hint: "This endpoint only accepts POST requests to create Credas invites"
+    },
+    { status: 405 }
+  )
+}
 
 export async function POST(request: Request) {
   try {

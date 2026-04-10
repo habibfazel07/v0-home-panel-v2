@@ -169,10 +169,13 @@ export async function getCredasStatus(inviteId: string): Promise<CredasStatusRes
 
   try {
     const response = await fetch(`${CREDAS_BASE_URL}/v2/ci/invites/${inviteId}`, {
+      method: "GET",
       headers: headers(),
     })
 
     if (!response.ok) {
+      const errorBody = await response.text().catch(() => "")
+      console.error(`[credas] getStatus error: ${response.status} ${response.statusText}`, errorBody)
       return { success: false, error: `Credas API error: ${response.status}` }
     }
 
