@@ -32,7 +32,7 @@ import {
 // TYPES & CONSTANTS
 // ============================================================================
 
-type StepType = 
+type StepType =
   | "terms-conditions"
   | "product-interests"
   | "transaction-type"
@@ -64,52 +64,112 @@ const agents = [
 ]
 
 // ============================================================================
-// FEE CALCULATION
+// FEE CALCULATION — HomePanel Pricing (effective April 2025)
 // ============================================================================
+
+function calcLegalFee(propertyValue: number, transactionType: string): number {
+  if (transactionType === "remortgage") {
+    // Remortgage fee bands
+    if (propertyValue <= 250000) return 499
+    if (propertyValue <= 500000) return 599
+    if (propertyValue <= 750000) return 699
+    if (propertyValue <= 1000000) return 799
+    return 999
+  }
+  // Sale & Purchase (freehold base) fee bands
+  if (propertyValue <= 150000) return 695
+  if (propertyValue <= 250000) return 795
+  if (propertyValue <= 350000) return 895
+  if (propertyValue <= 500000) return 995
+  if (propertyValue <= 650000) return 1095
+  if (propertyValue <= 800000) return 1195
+  if (propertyValue <= 1000000) return 1395
+  return 1595
+}
+
+function calcSDLT(price: number, isFTB: boolean, isAdditional: boolean): number {
+  if (price <= 0) return 0
+  if (isFTB && !isAdditional) {
+    if (price <= 425000) return 0
+    if (price <= 625000) return Math.round((price - 425000) * 0.05)
+    // No FTB relief above £625k — standard rates apply
+  }
+  const additional = isAdditional ? 0.03 : 0
+  const bands: [number, number][] = [[250000, 0], [925000, 0.05], [1500000, 0.10], [Infinity, 0.12]]
+  let sdlt = 0
+  let prev = 0
+  for (const [limit, rate] of bands) {
+    if (price <= limit) { sdlt += (price - prev) * (rate + additional); break }
+    sdlt += (limit - prev) * (rate + additional)
+    prev = limit
+  }
+  return Math.round(sdlt)
+}
+
+function calcLandRegistryFee(propertyValue: number): number {
+  if (propertyValue <= 80000) return 20
+  if (propertyValue <= 100000) return 40
+  if (propertyValue <= 200000) return 100
+  if (propertyValue <= 500000) return 270
+  if (propertyValue <= 1000000) return 540
+  return 1105
+}
 
 function calculateFees(data: Partial<EnquiryFormData>) {
   const propertyValue = parseFloat(data.propertyValue?.replace(/,/g, "") || "0")
   const transactionType = data.transactionType || "buying"
-  
-  let legalFee = 595
-  if (propertyValue > 250000) legalFee = 695
-  if (propertyValue > 500000) legalFee = 895
-  if (propertyValue > 1000000) legalFee = 1295
-  
+
   const isLeasehold = data.tenure === "leasehold"
-  const hasMortgage = data.hasMortgage === "yes"
   const isNewBuild = data.isNewBuild === "yes"
   const isCompanyPurchase = data.isCompanyPurchase === "yes"
   const hasGiftFunds = data.hasGiftFunds === "yes"
-  
-  const fees = {
-    legalFee,
-    leaseholdSupplement: isLeasehold ? 195 : 0,
-    mortgageFee: hasMortgage ? 95 : 0,
-    newBuildFee: isNewBuild ? 195 : 0,
-    companyFee: isCompanyPurchase ? 295 : 0,
-    giftFundsFee: hasGiftFunds ? 50 : 0,
-    searchFees: 300,
-    landRegistryFee: propertyValue > 500000 ? 295 : propertyValue > 250000 ? 150 : 100,
-    bankTransferFee: 35,
-  }
-  
-  const subtotal = fees.legalFee + fees.leaseholdSupplement + fees.mortgageFee + 
-    fees.newBuildFee + fees.companyFee + fees.giftFundsFee
+  const isFTB = data.firstTimeBuyer === "yes"
+  const isAdditional = data.propertyCount === "more-than-one"
+
+  const legalFee = calcLegalFee(propertyValue, transactionType)
+  const leaseholdSupplement = isLeasehold ? 250 : 0
+  const newBuildFee = isNewBuild ? 300 : 0
+  const companyFee = isCompanyPurchase ? 295 : 0
+  const giftFundsFee = hasGiftFunds ? 50 : 0
+
+  // Disbursements
+  const isPurchase = transactionType === "buying" || transactionType === "buying-selling"
+  const isSale = transactionType === "selling"
+  const searchFees = isPurchase ? 350 : 0
+  const landRegistryFee = isSale ? 0 : calcLandRegistryFee(propertyValue)
+  const bankTransferFee = 36 // inc VAT per transfer
+
+  // SDLT (purchase only)
+  const sdlt = isPurchase ? calcSDLT(propertyValue, isFTB, isAdditional) : 0
+
+  const subtotal = legalFee + leaseholdSupplement + newBuildFee + companyFee + giftFundsFee
   const vat = Math.round(subtotal * 0.2)
-  const disbursements = fees.searchFees + fees.landRegistryFee + fees.bankTransferFee
-  const total = subtotal + vat + disbursements
-  
+  const disbursements = searchFees + landRegistryFee + bankTransferFee
+  const totalExSDLT = subtotal + vat + disbursements
+  const total = totalExSDLT + sdlt
+
   return {
-    ...fees,
+    legalFee,
+    leaseholdSupplement,
+    newBuildFee,
+    companyFee,
+    giftFundsFee,
+    searchFees,
+    landRegistryFee,
+    bankTransferFee,
+    sdlt,
     subtotal,
     vat,
     disbursements,
+    totalExSDLT,
     total,
-    transactionLabel: transactionType === "buying" ? "purchase" : 
-      transactionType === "selling" ? "sale" : 
-      transactionType === "buying-selling" ? "purchase & sale" :
-      transactionType === "remortgage" ? "remortgage" : "transfer of equity"
+    isFTB,
+    isAdditional,
+    transactionLabel:
+      transactionType === "buying" ? "purchase" :
+        transactionType === "selling" ? "sale" :
+          transactionType === "buying-selling" ? "purchase & sale" :
+            transactionType === "remortgage" ? "remortgage" : "transfer of equity"
   }
 }
 
@@ -119,7 +179,7 @@ function calculateFees(data: Partial<EnquiryFormData>) {
 
 function getStepsForTransaction(transactionType: string): StepType[] {
   const preSteps: StepType[] = ["terms-conditions", "product-interests", "transaction-type"]
-  
+
   if (transactionType === "buying" || transactionType === "buying-selling") {
     return [
       ...preSteps,
@@ -138,7 +198,7 @@ function getStepsForTransaction(transactionType: string): StepType[] {
       "quote",
     ]
   }
-  
+
   if (transactionType === "selling") {
     return [
       ...preSteps,
@@ -151,7 +211,7 @@ function getStepsForTransaction(transactionType: string): StepType[] {
       "quote",
     ]
   }
-  
+
   if (transactionType === "remortgage") {
     return [
       ...preSteps,
@@ -163,7 +223,7 @@ function getStepsForTransaction(transactionType: string): StepType[] {
       "quote",
     ]
   }
-  
+
   if (transactionType === "transfer-equity") {
     return [
       ...preSteps,
@@ -176,7 +236,7 @@ function getStepsForTransaction(transactionType: string): StepType[] {
       "quote",
     ]
   }
-  
+
   return preSteps
 }
 
@@ -226,12 +286,12 @@ export function MultiStepForm() {
 
   const { handleSubmit, watch, setValue, formState: { errors }, trigger } = form
   const watchedValues = watch()
-  
-  const steps = useMemo(() => 
+
+  const steps = useMemo(() =>
     getStepsForTransaction(watchedValues.transactionType),
     [watchedValues.transactionType]
   )
-  
+
   const currentStep = steps[currentStepIndex] || "terms-conditions"
   const totalSteps = steps.length || 1
 
@@ -302,14 +362,14 @@ export function MultiStepForm() {
   const onSubmit = async (data: EnquiryFormData) => {
     setIsSubmitting(true)
     setError(null)
-    
+
     try {
       const response = await fetch("/api/enquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Something went wrong. Please try again.")
@@ -329,7 +389,7 @@ export function MultiStepForm() {
 
   const handleDecline = async () => {
     setShowFeedbackForm(true)
-    
+
     try {
       await fetch("/api/enquiry/decline", {
         method: "POST",
@@ -444,7 +504,7 @@ export function MultiStepForm() {
             Back
           </Button>
         </div>
-        
+
         {/* Progress */}
         <div className="px-6 pt-4">
           <ProgressIndicator
@@ -808,7 +868,7 @@ function TransactionTypeStep({
           <li className="underline decoration-dotted underline-offset-4">in the industry.</li>
         </ul>
       </div>
-      
+
       <FormField label="What would you like a quote for?" className="text-center">
         <RadioCardGroup
           options={transactionTypes.map(t => ({ value: t.value, label: t.label }))}
@@ -841,13 +901,13 @@ function PropertyAddressStep({
   onAddressUnknownChange: (checked: boolean) => void
 }) {
   const action = transactionType === "selling" ? "selling" : "buying"
-  
+
   return (
     <div className="space-y-6">
       <StepHeader
         title={`What is the address of the property you are ${action}?`}
       />
-      
+
       <FormField>
         <AddressAutocomplete
           value={addressData}
@@ -857,7 +917,7 @@ function PropertyAddressStep({
           disabled={addressUnknown}
         />
       </FormField>
-      
+
       <div className="flex items-center gap-3">
         <Checkbox
           id="addressUnknown"
@@ -882,11 +942,11 @@ function TenureStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Is it a Freehold or Leasehold property?" />
-      
+
       <InfoBox>
         Most houses are <strong className="text-foreground">Freehold</strong> and most flats are <strong className="text-foreground">Leasehold</strong>. If you are buying through an Estate Agent they should be able to make you aware.
       </InfoBox>
-      
+
       <RadioCardGroup
         options={tenureTypes.map(t => ({ value: t.value, label: t.label }))}
         value={value}
@@ -908,7 +968,7 @@ function PropertyValueStep({
   return (
     <div className="space-y-6">
       <StepHeader title="How much will you be paying (approximately)?" />
-      
+
       <FormField>
         <TextInput
           prefix="£"
@@ -933,7 +993,7 @@ function OwnerCountStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Including you, how many people will own this property?" />
-      
+
       <RadioCardGroup
         options={ownerCountOptions.map(o => ({ value: o.value, label: o.label }))}
         value={value}
@@ -955,11 +1015,11 @@ function FirstTimeBuyerStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Will this be the first property you have all ever owned?" />
-      
+
       <InfoBox>
         You could be considered a first time buyer if you have never owned or part owned a property anywhere in the world. <strong className="text-foreground">If any of the new owners have then you should answer &quot;No&quot;.</strong>
       </InfoBox>
-      
+
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes, we are all first time buyers" },
@@ -984,7 +1044,7 @@ function PropertyCountStep({
   return (
     <div className="space-y-6">
       <StepHeader title="When your purchase completes how many properties will you all own?" />
-      
+
       <RadioCardGroup
         options={propertyCountOptions.map(o => ({ value: o.value, label: o.label }))}
         value={value}
@@ -1006,7 +1066,7 @@ function NewBuildStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Is this a new build property?" />
-      
+
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes" },
@@ -1031,7 +1091,7 @@ function MortgageStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Will you be getting a mortgage?" />
-      
+
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes" },
@@ -1056,11 +1116,11 @@ function CompanyPurchaseStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Are you buying under a company name?" />
-      
+
       <InfoBox>
         This could be a limited company (LTD), partnership or any other company.
       </InfoBox>
-      
+
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes" },
@@ -1085,11 +1145,11 @@ function GiftFundsStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Will someone be giving you money to help with the purchase?" />
-      
+
       <InfoBox>
         This could be a friend or relative who is helping with the deposit or the price of the property. But this does not include anyone who will also be an owner of the property.
       </InfoBox>
-      
+
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes" },
@@ -1114,7 +1174,7 @@ function BankFundsOnlyStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Will you be paying for the property using only funds in your bank account?" />
-      
+
       <InfoBox>
         You only need to answer &quot;Yes&quot; if 100% of the funds for this property are coming from cash that someone already has.
         <br /><br />
@@ -1124,7 +1184,7 @@ function BankFundsOnlyStep({
           <li>You are selling another property that will pay for this one.</li>
         </ul>
       </InfoBox>
-      
+
       <RadioCardGroup
         options={[
           { value: "yes", label: "Yes" },
@@ -1153,7 +1213,7 @@ function PersonalDetailsStep({
   return (
     <div className="space-y-6">
       <StepHeader title="Tell us about yourself" />
-      
+
       <div className="space-y-4">
         <FormField label="First name" required error={errors.firstName?.message}>
           <TextInput
@@ -1164,7 +1224,7 @@ function PersonalDetailsStep({
             error={!!errors.firstName}
           />
         </FormField>
-        
+
         <FormField label="Last name" required error={errors.lastName?.message}>
           <TextInput
             value={values.lastName}
@@ -1174,7 +1234,7 @@ function PersonalDetailsStep({
             error={!!errors.lastName}
           />
         </FormField>
-        
+
         <FormField label="Email address" required error={errors.email?.message}>
           <TextInput
             type="email"
@@ -1185,7 +1245,7 @@ function PersonalDetailsStep({
             error={!!errors.email}
           />
         </FormField>
-        
+
         <FormField label="Phone number" required error={errors.phone?.message}>
           <TextInput
             type="tel"
@@ -1207,25 +1267,25 @@ function QuoteStep({
   values: EnquiryFormData
 }) {
   const fees = calculateFees(values)
-  
+
   return (
     <div className="text-center">
       <img src="/logo.svg" alt="HomePanel" className="w-12 h-12 mx-auto mb-4" />
-      
+
       <h2 className="text-xl font-semibold mb-1">
         If you let us handle this
       </h2>
       <p className="text-xl font-semibold mb-6">
         journey for you
       </p>
-      
+
       <p className="text-muted-foreground mb-2">
         Our fee for your {fees.transactionLabel} would be:
       </p>
       <p className="text-4xl font-bold mb-8">
         £{fees.total.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </p>
-      
+
       {/* Fee breakdown */}
       <div className="text-left bg-muted/50 rounded-xl p-5 mb-8">
         <h3 className="font-medium mb-4 text-sm">Fee breakdown</h3>
@@ -1238,12 +1298,6 @@ function QuoteStep({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Leasehold supplement</span>
               <span className="font-medium">£{fees.leaseholdSupplement}</span>
-            </div>
-          )}
-          {fees.mortgageFee > 0 && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Mortgage work</span>
-              <span className="font-medium">£{fees.mortgageFee}</span>
             </div>
           )}
           {fees.newBuildFee > 0 && (
@@ -1265,7 +1319,7 @@ function QuoteStep({
             </div>
           )}
           <div className="flex justify-between pt-2.5 border-t border-border">
-            <span className="text-muted-foreground">Subtotal</span>
+            <span className="text-muted-foreground">Subtotal (ex VAT)</span>
             <span className="font-medium">£{fees.subtotal}</span>
           </div>
           <div className="flex justify-between">
@@ -1273,21 +1327,44 @@ function QuoteStep({
             <span className="font-medium">£{fees.vat}</span>
           </div>
           <div className="flex justify-between pt-2.5 border-t border-border">
-            <span className="text-muted-foreground">Disbursements (searches, Land Registry, etc.)</span>
+            <span className="text-muted-foreground">Disbursements</span>
             <span className="font-medium">£{fees.disbursements}</span>
           </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground text-xs">Searches {fees.searchFees > 0 ? `(£${fees.searchFees})` : "(n/a)"}, Land Registry {fees.landRegistryFee > 0 ? `(£${fees.landRegistryFee})` : "(n/a)"}, Bank transfer (£{fees.bankTransferFee})</span>
+          </div>
+          {fees.sdlt > 0 && (
+            <div className="flex justify-between pt-2.5 border-t border-border">
+              <span className="text-muted-foreground">
+                SDLT{fees.isFTB ? " (First Time Buyer)" : fees.isAdditional ? " (+3% Additional)" : ""}
+              </span>
+              <span className="font-medium">£{fees.sdlt.toLocaleString("en-GB")}</span>
+            </div>
+          )}
+          {fees.sdlt === 0 && fees.isFTB && (
+            <div className="flex justify-between pt-2.5 border-t border-border">
+              <span className="text-muted-foreground">SDLT (First Time Buyer relief)</span>
+              <span className="font-medium text-green-600">£0</span>
+            </div>
+          )}
           <div className="flex justify-between pt-2.5 border-t border-border text-foreground">
-            <span className="font-semibold">Total</span>
+            <span className="font-semibold">Total estimate</span>
             <span className="font-semibold">£{fees.total.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
+          {fees.sdlt > 0 && (
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Excl. SDLT</span>
+              <span>£{fees.totalExSDLT.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          )}
         </div>
       </div>
-      
+
       {/* Agents */}
       <p className="text-muted-foreground mb-4">
         Your case would directly be handled by
       </p>
-      
+
       <div className="flex items-center justify-center gap-6 mb-4">
         {agents.map((agent, index) => (
           <div key={agent.name} className="flex items-center gap-4">
@@ -1296,8 +1373,8 @@ function QuoteStep({
             )}
             <div className="text-center">
               <div className="w-16 h-16 rounded-full bg-muted mx-auto mb-2 overflow-hidden">
-                <img 
-                  src={agent.image} 
+                <img
+                  src={agent.image}
                   alt={agent.name}
                   className="w-full h-full object-cover"
                 />
@@ -1308,7 +1385,7 @@ function QuoteStep({
           </div>
         ))}
       </div>
-      
+
       <p className="text-sm text-muted-foreground">
         Experts in their field.
       </p>
@@ -1345,8 +1422,8 @@ function FeedbackForm({
   const [otherReason, setOtherReason] = useState("")
 
   const toggleReason = (reasonId: string) => {
-    setSelectedReasons(prev => 
-      prev.includes(reasonId) 
+    setSelectedReasons(prev =>
+      prev.includes(reasonId)
         ? prev.filter(r => r !== reasonId)
         : [...prev, reasonId]
     )
