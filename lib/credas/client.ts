@@ -161,18 +161,13 @@ export async function sendCredasInvite(
 
     console.log("[credas] Request body:", JSON.stringify(requestBody, null, 2))
 
-    // Credas API endpoint
-    // CREDAS_BASE_URL should be: https://portal.credasdemo.com/api (sandbox) or https://portal.credas.com/api (prod)
-    // The endpoint is: POST {baseUrl}/v2/ci/processes (note: plural "processes" not "process")
-    // 
-    // So if CREDAS_BASE_URL = "https://portal.credasdemo.com/api"
-    // Full URL = "https://portal.credasdemo.com/api/v2/ci/processes"
-    
-    // Ensure base URL doesn't have trailing slash
+    // Credas API endpoint - POST /v2/ci/processes (plural!)
+    // CREDAS_BASE_URL should be: https://portal.credasdemo.com/api (sandbox)
     const baseUrl = CREDAS_BASE_URL.replace(/\/$/, "")
     const endpoint = `${baseUrl}/v2/ci/processes`
+    console.log("[credas] CODE VERSION: 2026-04-10-v3")
     console.log("[credas] CREDAS_BASE_URL:", CREDAS_BASE_URL)
-    console.log("[credas] Calling endpoint:", endpoint)
+    console.log("[credas] Full endpoint:", endpoint)
     
     const response = await fetch(endpoint, {
       method: "POST",
