@@ -25,7 +25,7 @@ export async function GET() {
       return NextResponse.redirect(new URL(`/onboarding/${existingDemo.onboarding_token}`, process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"))
     }
     
-    // Create a new demo enquiry
+    // Create a new demo enquiry with minimal required fields
     const { data: newEnquiry, error } = await adminClient
       .from("enquiries")
       .insert({
@@ -33,14 +33,9 @@ export async function GET() {
         last_name: "User",
         email: "demo@homepanel.test",
         phone: "+447700900000",
-        transaction_type: "purchase",
         status: "new",
-        internal_status: "pending_onboarding",
         onboarding_token: token,
-        onboarding_status: "pending",
         onboarding_data: {},
-        property_address: "123 Demo Street, London, SW1A 1AA",
-        property_price: 500000,
       })
       .select("id, onboarding_token")
       .single()
