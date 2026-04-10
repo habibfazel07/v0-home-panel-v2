@@ -20,42 +20,36 @@ const CREDAS_API_KEY = process.env.CREDAS_API_KEY
 // Use sandbox environment if no API key or if using demo URL
 const IS_SANDBOX = !CREDAS_API_KEY || CREDAS_BASE_URL.includes("credasdemo")
 
-// Journey IDs for HomePanel account
-// Standard AML provided by Credas for HomePanel sandbox account
-// To get Source of Funds Journey ID, call: GET https://portal.credasdemo.com/api/v2/ci/journeys
-const JOURNEY_CONFIG = {
-  identity: {
-    // HomePanel sandbox credentials from Credas
-    sandbox: { journeyId: "5266c860-f7ec-455b-be7d-7399fc8e11a6", actorId: 17 },
-    // Production credentials - will be provided by Credas when going live
-    production: { journeyId: process.env.CREDAS_IDENTITY_JOURNEY_ID || "5266c860-f7ec-455b-be7d-7399fc8e11a6", actorId: 17 },
-  },
-  source_of_funds: {
-    // Source of Funds - get Journey ID from GET /v2/ci/journeys endpoint
-    // Using env var since it wasn't provided in the email
-    sandbox: { journeyId: process.env.CREDAS_SOF_JOURNEY_ID || "", actorId: parseInt(process.env.CREDAS_SOF_ACTOR_ID || "0", 10) },
-    production: { journeyId: process.env.CREDAS_SOF_JOURNEY_ID || "", actorId: parseInt(process.env.CREDAS_SOF_ACTOR_ID || "0", 10) },
-  },
-}
+// Environment variables for Journey configuration
+// CREDAS_AML_JOURNEY_ID - Journey ID for Identity/AML verification
+// CREDAS_AML_ACTOR_ID - Actor ID for Identity/AML verification
+const CREDAS_AML_JOURNEY_ID = process.env.CREDAS_AML_JOURNEY_ID
+const CREDAS_AML_ACTOR_ID = process.env.CREDAS_AML_ACTOR_ID
 
-// Allow env vars to override journey IDs
-const CREDAS_IDENTITY_JOURNEY_ID = process.env.CREDAS_IDENTITY_JOURNEY_ID
-const CREDAS_IDENTITY_ACTOR_ID = process.env.CREDAS_IDENTITY_ACTOR_ID
-const CREDAS_SOF_JOURNEY_ID = process.env.CREDAS_SOF_JOURNEY_ID
-const CREDAS_SOF_ACTOR_ID = process.env.CREDAS_SOF_ACTOR_ID
+// Fallback values (HomePanel sandbox defaults from Credas email)
+const DEFAULT_AML_JOURNEY_ID = "5266c860-f7ec-455b-be7d-7399fc8e11a6"
+const DEFAULT_AML_ACTOR_ID = 17
 
 function getJourneyConfig(checkType: CredasCheckType) {
-  const env = IS_SANDBOX ? "sandbox" : "production"
-  
   if (checkType === "aml") {
     return {
-      journeyId: CREDAS_IDENTITY_JOURNEY_ID || JOURNEY_CONFIG.identity[env].journeyId,
-      actorId: CREDAS_IDENTITY_ACTOR_ID ? parseInt(CREDAS_IDENTITY_ACTOR_ID, 10) : JOURNEY_CONFIG.identity[env].actorId,
+      journeyId: CREDAS_AML_JOURNEY_ID || DEFAULT_AML_JOURNEY_ID,
+      actorId: CREDAS_AML_ACTOR_ID ? parseInt(CREDAS_AML_ACTOR_ID, 10) : DEFAULT_AML_ACTOR_ID,
     }
   } else {
+    // Source of Funds - for now use the same AML journey until SOF journey is configured
+    // Contact Credas to get SOF journey ID, then add CREDAS_SOF_JOURNEY_ID env var
+    const sofJourneyId = process.env.CREDAS_SOF_JOURNEY_ID
+    const sofActorId = process.env.CREDAS_SOF_ACTOR_ID
+    
+    if (!sofJourneyId) {
+      console.warn("[credas] CREDAS_SOF_JOURNEY_ID not configured - Source of Funds checks will not work")
+      return { journeyId: "", actorId: 0 }
+    }
+    
     return {
-      journeyId: CREDAS_SOF_JOURNEY_ID || JOURNEY_CONFIG.source_of_funds[env].journeyId,
-      actorId: CREDAS_SOF_ACTOR_ID ? parseInt(CREDAS_SOF_ACTOR_ID, 10) : JOURNEY_CONFIG.source_of_funds[env].actorId,
+      journeyId: sofJourneyId,
+      actorId: sofActorId ? parseInt(sofActorId, 10) : 0,
     }
   }
 }

@@ -27,6 +27,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid check type. Must be 'aml' or 'source_of_funds'" }, { status: 400 })
     }
 
+    // Check if SOF journey is configured
+    if (checkType === "source_of_funds" && !process.env.CREDAS_SOF_JOURNEY_ID) {
+      return NextResponse.json({ 
+        error: "Source of Funds verification is not yet configured. Please contact support.",
+        details: "CREDAS_SOF_JOURNEY_ID environment variable not set"
+      }, { status: 503 })
+    }
+
     console.log("[credas] Creating admin client...")
     const adminClient = createAdminClient()
 
