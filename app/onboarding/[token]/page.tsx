@@ -265,26 +265,42 @@ export default function OnboardingPage() {
     setSaving(true)
     setError(null)
     try {
+      console.log("[v0] Starting ID verification, calling /api/onboarding/credas...")
       const res = await fetch("/api/onboarding/credas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, checkType: "aml" }),
       })
+      
+      console.log("[v0] Response status:", res.status)
 
-      if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.error || "Failed to start identity verification")
+      // Handle non-JSON responses (like 405 errors)
+      const contentType = res.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text()
+        console.error("[v0] Non-JSON response:", text)
+        throw new Error(`Credas API error: ${res.status} - ${res.statusText}`)
       }
 
       const data = await res.json()
+      console.log("[v0] Response data:", data)
+      
+      if (!res.ok) {
+        throw new Error(data.error || data.details || `Credas API error: ${res.status}`)
+      }
+
       await saveProgress("id_verification", { started: true, started_at: new Date().toISOString(), provider: "credas" })
 
       // Open Credas identity / AML journey in new tab
       const url = data.inviteUrl || data.url
       if (url) {
+        console.log("[v0] Opening Credas URL:", url)
         window.open(url, "_blank")
+      } else {
+        console.warn("[v0] No invite URL in response")
       }
     } catch (err) {
+      console.error("[v0] ID verification error:", err)
       setError(err instanceof Error ? err.message : "Failed to start verification")
     } finally {
       setSaving(false)
@@ -309,26 +325,42 @@ export default function OnboardingPage() {
     setSaving(true)
     setError(null)
     try {
+      console.log("[v0] Starting SOF verification, calling /api/onboarding/credas...")
       const res = await fetch("/api/onboarding/credas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, checkType: "source_of_funds" }),
       })
+      
+      console.log("[v0] Response status:", res.status)
 
-      if (!res.ok) {
-        const errData = await res.json()
-        throw new Error(errData.error || "Failed to start source of funds check")
+      // Handle non-JSON responses (like 405 errors)
+      const contentType = res.headers.get("content-type")
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text()
+        console.error("[v0] Non-JSON response:", text)
+        throw new Error(`Credas API error: ${res.status} - ${res.statusText}`)
       }
 
       const data = await res.json()
+      console.log("[v0] Response data:", data)
+      
+      if (!res.ok) {
+        throw new Error(data.error || data.details || `Credas API error: ${res.status}`)
+      }
+
       await saveProgress("source_of_funds", { started: true, started_at: new Date().toISOString(), provider: "credas" })
 
       // Open Credas source of funds journey in new tab
       const url = data.inviteUrl || data.url
       if (url) {
+        console.log("[v0] Opening Credas URL:", url)
         window.open(url, "_blank")
+      } else {
+        console.warn("[v0] No invite URL in response")
       }
     } catch (err) {
+      console.error("[v0] SOF verification error:", err)
       setError(err instanceof Error ? err.message : "Failed to start verification")
     } finally {
       setSaving(false)
