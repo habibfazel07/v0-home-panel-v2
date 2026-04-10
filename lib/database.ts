@@ -2,10 +2,16 @@ import { createClient } from "@supabase/supabase-js"
 
 // Create admin client with service role key for server-side operations
 export function createAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error(
+      `Missing Supabase configuration: ${!supabaseUrl ? 'NEXT_PUBLIC_SUPABASE_URL' : ''} ${!serviceRoleKey ? 'SUPABASE_SERVICE_ROLE_KEY' : ''}`
+    )
+  }
+  
+  return createClient(supabaseUrl, serviceRoleKey)
 }
 
 // Activity action types
