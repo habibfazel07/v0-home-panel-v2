@@ -41,6 +41,31 @@ interface Document {
   created_at: string
 }
 
+interface CredasData {
+  id_verification?: {
+    completed?: boolean
+    completed_at?: string
+    status?: string
+    risk_level?: "low" | "medium" | "high"
+    aml_passed?: boolean
+    pep_match?: boolean
+    sanctions_match?: boolean
+    identity_verified?: boolean
+    address_verified?: boolean
+  }
+  source_of_funds?: {
+    completed?: boolean
+    completed_at?: string
+    status?: string
+    risk_level?: "low" | "medium" | "high"
+    sof_passed?: boolean
+  }
+  credas_aml_invite_id?: string
+  credas_sof_invite_id?: string
+  credas_aml_raw_response?: Record<string, unknown>
+  credas_sof_raw_response?: Record<string, unknown>
+}
+
 interface ComplianceReviewPanelProps {
   enquiryId?: string
   caseId?: string
@@ -48,6 +73,7 @@ interface ComplianceReviewPanelProps {
   documents: Document[]
   internalStatus: string
   onStatusUpdate?: () => void
+  credasData?: CredasData
 }
 
 const STATUS_CONFIG = {
@@ -77,11 +103,13 @@ export function ComplianceReviewPanel({
   complianceChecks,
   documents,
   internalStatus,
-  onStatusUpdate
+  onStatusUpdate,
+  credasData
 }: ComplianceReviewPanelProps) {
   const [expandedCheck, setExpandedCheck] = useState<string | null>(null)
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState<string | null>(null)
+  const [showRawResponse, setShowRawResponse] = useState<"aml" | "sof" | null>(null)
 
   const identityCheck = complianceChecks.find(c => c.check_type === "identity_verification")
   const sofCheck = complianceChecks.find(c => c.check_type === "source_of_funds")
@@ -236,18 +264,102 @@ export function ComplianceReviewPanel({
         
         {expandedCheck === "identity" && (
           <div className="border-t border-border p-5 space-y-5">
-            {identityCheck ? (
+            {identityCheck || credasData?.id_verification ? (
               <>
+                {/* Credas AML Results */}
+                {credasData?.id_verification && (
+                  <div className="space-y-4">
+                    {/* Risk Level Badge */}
+                    {credasData.id_verification.risk_level && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Risk Level:</span>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                          credasData.id_verification.risk_level === "low" ? "text-accent bg-accent/10" :
+                          credasData.id_verification.risk_level === "medium" ? "text-amber-700 bg-amber-50" :
+                          "text-red-700 bg-red-50"
+                        }`}>
+                          {credasData.id_verification.risk_level.toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Check Results Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className={`p-3 rounded-xl border ${credasData.id_verification.aml_passed ? "border-accent/30 bg-accent/5" : "border-red-200 bg-red-50"}`}>
+                        <p className="text-xs text-muted-foreground mb-1">AML Check</p>
+                        <p className={`text-sm font-medium ${credasData.id_verification.aml_passed ? "text-accent" : "text-red-700"}`}>
+                          {credasData.id_verification.aml_passed ? "Passed" : "Failed"}
+                        </p>
+                      </div>
+                      <div className={`p-3 rounded-xl border ${credasData.id_verification.identity_verified ? "border-accent/30 bg-accent/5" : "border-muted bg-muted/50"}`}>
+                        <p className="text-xs text-muted-foreground mb-1">ID Verified</p>
+                        <p className={`text-sm font-medium ${credasData.id_verification.identity_verified ? "text-accent" : "text-muted-foreground"}`}>
+                          {credasData.id_verification.identity_verified ? "Yes" : "Pending"}
+                        </p>
+                      </div>
+                      <div className={`p-3 rounded-xl border ${!credasData.id_verification.pep_match ? "border-accent/30 bg-accent/5" : "border-red-200 bg-red-50"}`}>
+                        <p className="text-xs text-muted-foreground mb-1">PEP Match</p>
+                        <p className={`text-sm font-medium ${!credasData.id_verification.pep_match ? "text-accent" : "text-red-700"}`}>
+                          {credasData.id_verification.pep_match ? "MATCH" : "Clear"}
+                        </p>
+                      </div>
+                      <div className={`p-3 rounded-xl border ${!credasData.id_verification.sanctions_match ? "border-accent/30 bg-accent/5" : "border-red-200 bg-red-50"}`}>
+                        <p className="text-xs text-muted-foreground mb-1">Sanctions</p>
+                        <p className={`text-sm font-medium ${!credasData.id_verification.sanctions_match ? "text-accent" : "text-red-700"}`}>
+                          {credasData.id_verification.sanctions_match ? "MATCH" : "Clear"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* PEP/Sanctions Warning */}
+                    {(credasData.id_verification.pep_match || credasData.id_verification.sanctions_match) && (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-red-800">Manual Review Required</p>
+                            <p className="text-sm text-red-700 mt-1">
+                              {credasData.id_verification.pep_match && "Politically Exposed Person (PEP) match detected. "}
+                              {credasData.id_verification.sanctions_match && "Sanctions list match detected. "}
+                              Please review before proceeding.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground mb-1">Provider Reference</p>
-                    <p className="font-mono text-xs">{identityCheck.id.slice(0, 12)}...</p>
+                    <p className="text-muted-foreground mb-1">Credas Invite ID</p>
+                    <p className="font-mono text-xs">{credasData?.credas_aml_invite_id || identityCheck?.id?.slice(0, 12) || "—"}...</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground mb-1">Completed At</p>
-                    <p>{identityCheck.completed_at ? new Date(identityCheck.completed_at).toLocaleString() : "—"}</p>
+                    <p>{credasData?.id_verification?.completed_at || identityCheck?.completed_at ? new Date(credasData?.id_verification?.completed_at || identityCheck?.completed_at || "").toLocaleString() : "—"}</p>
                   </div>
                 </div>
+
+                {/* View Raw Response */}
+                {credasData?.credas_aml_raw_response && (
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowRawResponse(showRawResponse === "aml" ? null : "aml")}
+                      className="text-xs"
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      {showRawResponse === "aml" ? "Hide" : "View"} Raw Credas Response
+                    </Button>
+                    {showRawResponse === "aml" && (
+                      <pre className="mt-3 p-4 bg-muted rounded-xl text-xs overflow-auto max-h-64">
+                        {JSON.stringify(credasData.credas_aml_raw_response, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                )}
                 
                 {identityCheck.exception_flags && identityCheck.exception_flags.length > 0 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -343,18 +455,73 @@ export function ComplianceReviewPanel({
         
         {expandedCheck === "sof" && (
           <div className="border-t border-border p-5 space-y-5">
-            {sofCheck ? (
+            {sofCheck || credasData?.source_of_funds ? (
               <>
+                {/* Credas SOF Results */}
+                {credasData?.source_of_funds && (
+                  <div className="space-y-4">
+                    {/* Risk Level Badge */}
+                    {credasData.source_of_funds.risk_level && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Risk Level:</span>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                          credasData.source_of_funds.risk_level === "low" ? "text-accent bg-accent/10" :
+                          credasData.source_of_funds.risk_level === "medium" ? "text-amber-700 bg-amber-50" :
+                          "text-red-700 bg-red-50"
+                        }`}>
+                          {credasData.source_of_funds.risk_level.toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* SOF Check Result */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className={`p-3 rounded-xl border ${credasData.source_of_funds.sof_passed ? "border-accent/30 bg-accent/5" : "border-red-200 bg-red-50"}`}>
+                        <p className="text-xs text-muted-foreground mb-1">SOF Verification</p>
+                        <p className={`text-sm font-medium ${credasData.source_of_funds.sof_passed ? "text-accent" : "text-red-700"}`}>
+                          {credasData.source_of_funds.sof_passed ? "Passed" : "Failed"}
+                        </p>
+                      </div>
+                      <div className={`p-3 rounded-xl border ${credasData.source_of_funds.completed ? "border-accent/30 bg-accent/5" : "border-muted bg-muted/50"}`}>
+                        <p className="text-xs text-muted-foreground mb-1">Status</p>
+                        <p className={`text-sm font-medium ${credasData.source_of_funds.completed ? "text-accent" : "text-muted-foreground"}`}>
+                          {credasData.source_of_funds.status || "Pending"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground mb-1">Provider Reference</p>
-                    <p className="font-mono text-xs">{sofCheck.id.slice(0, 12)}...</p>
+                    <p className="text-muted-foreground mb-1">Credas Invite ID</p>
+                    <p className="font-mono text-xs">{credasData?.credas_sof_invite_id || sofCheck?.id?.slice(0, 12) || "—"}...</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground mb-1">Completed At</p>
-                    <p>{sofCheck.completed_at ? new Date(sofCheck.completed_at).toLocaleString() : "—"}</p>
+                    <p>{credasData?.source_of_funds?.completed_at || sofCheck?.completed_at ? new Date(credasData?.source_of_funds?.completed_at || sofCheck?.completed_at || "").toLocaleString() : "—"}</p>
                   </div>
                 </div>
+
+                {/* View Raw Response */}
+                {credasData?.credas_sof_raw_response && (
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowRawResponse(showRawResponse === "sof" ? null : "sof")}
+                      className="text-xs"
+                    >
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      {showRawResponse === "sof" ? "Hide" : "View"} Raw Credas Response
+                    </Button>
+                    {showRawResponse === "sof" && (
+                      <pre className="mt-3 p-4 bg-muted rounded-xl text-xs overflow-auto max-h-64">
+                        {JSON.stringify(credasData.credas_sof_raw_response, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                )}
                 
                 {sofCheck.exception_flags && sofCheck.exception_flags.length > 0 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">

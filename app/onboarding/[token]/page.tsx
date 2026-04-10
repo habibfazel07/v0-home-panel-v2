@@ -114,6 +114,8 @@ export default function OnboardingPage() {
   const [uploadedDocs, setUploadedDocs] = useState<{ name: string; type: string; url: string }[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadingType, setUploadingType] = useState<string | null>(null)
+  const [pollingAml, setPollingAml] = useState(false)
+  const [pollingSof, setPolllingSof] = useState(false)
 
   const fetchEnquiry = useCallback(async () => {
     try {
@@ -156,6 +158,58 @@ export default function OnboardingPage() {
   useEffect(() => {
     fetchEnquiry()
   }, [fetchEnquiry])
+
+  // Auto-poll Credas status when waiting for verification completion
+  useEffect(() => {
+    if (currentStep !== "id-verification" && currentStep !== "source-of-funds") return
+    
+    const checkType = currentStep === "id-verification" ? "aml" : "source_of_funds"
+    const onboardingData = enquiry?.onboarding_data
+    const stepData = checkType === "aml" ? onboardingData?.id_verification : onboardingData?.source_of_funds
+    
+    // Only poll if started but not completed
+    if (!stepData?.started || stepData?.completed) return
+
+    const setPolling = checkType === "aml" ? setPollingAml : setPolllingSof
+
+    const pollStatus = async () => {
+      try {
+        const res = await fetch(`/api/onboarding/credas/status?token=${token}&checkType=${checkType}`)
+        if (!res.ok) return
+        
+        const data = await res.json()
+        
+        if (data.status === "complete" && data.localStatus?.completed) {
+          // Credas verification complete - refresh and auto-advance
+          await fetchEnquiry()
+          setSuccessMessage(checkType === "aml" 
+            ? "Identity verification completed successfully!" 
+            : "Source of funds verification completed successfully!")
+          setTimeout(() => setSuccessMessage(null), 3000)
+          
+          if (checkType === "aml") {
+            setCurrentStep("source-of-funds")
+          } else {
+            setCurrentStep("documents")
+          }
+        }
+      } catch (err) {
+        console.error("Polling error:", err)
+      }
+    }
+
+    // Initial poll
+    pollStatus()
+    setPolling(true)
+
+    // Poll every 5 seconds
+    const interval = setInterval(pollStatus, 5000)
+
+    return () => {
+      clearInterval(interval)
+      setPolling(false)
+    }
+  }, [currentStep, enquiry?.onboarding_data, token, fetchEnquiry])
 
   const determineCurrentStep = (enq: EnquiryData) => {
     if (enq.onboarding_status === "completed" || enq.onboarding_data?.submitted_at) {
@@ -680,10 +734,17 @@ export default function OnboardingPage() {
               </Button>
             </div>
 
-            <div className="flex items-start gap-3 text-sm text-muted-foreground bg-muted/50 rounded-xl p-4">
-              <Info className="h-4 w-4 shrink-0 mt-0.5" />
-              <p>Your identity verification is reviewed by our compliance team. This typically takes 1-2 business days.</p>
-            </div>
+            {pollingAml && enquiry?.onboarding_data?.id_verification?.started && !enquiry?.onboarding_data?.id_verification?.completed ? (
+              <div className="flex items-center gap-3 text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-xl p-4">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                <p>Waiting for your Credas verification to complete... This page will auto-update when done.</p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 text-sm text-muted-foreground bg-muted/50 rounded-xl p-4">
+                <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>Your identity verification is reviewed by our compliance team. This typically takes 1-2 business days.</p>
+              </div>
+            )}
 
             <Button
               className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-medium"
@@ -746,10 +807,17 @@ export default function OnboardingPage() {
               </Button>
             </div>
 
-            <div className="flex items-start gap-3 text-sm text-muted-foreground bg-muted/50 rounded-xl p-4">
-              <Info className="h-4 w-4 shrink-0 mt-0.5" />
-              <p>Your data is securely encrypted. We only see a summary report, not your full transaction history.</p>
-            </div>
+            {pollingSof && enquiry?.onboarding_data?.source_of_funds?.started && !enquiry?.onboarding_data?.source_of_funds?.completed ? (
+              <div className="flex items-center gap-3 text-sm bg-blue-50 border border-blue-200 text-blue-800 rounded-xl p-4">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                <p>Waiting for your bank connection to complete... This page will auto-update when done.</p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 text-sm text-muted-foreground bg-muted/50 rounded-xl p-4">
+                <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>Your data is securely encrypted. We only see a summary report, not your full transaction history.</p>
+              </div>
+            )}
 
             <Button
               className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 rounded-xl font-medium"

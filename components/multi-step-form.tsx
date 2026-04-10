@@ -758,10 +758,10 @@ function TermsConditionsStep({
             />
             <div className="flex-1">
               <label htmlFor="termsAccepted" className="text-sm font-medium cursor-pointer block">
-                I agree to Emerald Green Energy&apos;s Terms and Conditions <span className="text-destructive">*</span>
+                I agree to HomePanel&apos;s Terms and Conditions <span className="text-destructive">*</span>
               </label>
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                By checking this box, I acknowledge and consent to Emerald Green Energy Limited collecting, processing, and sharing my personal information with authorised third-party partners for the purpose of providing quotations, services, and related communications regarding home energy products and conveyancing services. I understand that my data will be handled in accordance with applicable data protection laws, including the UK GDPR, and that I may withdraw my consent at any time by contacting Emerald Green Energy Limited directly.
+                By checking this box, I acknowledge and consent to HomePanel Limited collecting, processing, and sharing my personal information with authorised third-party partners including Credas for identity verification (AML) and source of funds checks. I understand that my data will be handled in accordance with applicable data protection laws, including the UK GDPR, and that I may withdraw my consent at any time by contacting HomePanel.
               </p>
             </div>
           </div>
@@ -780,7 +780,7 @@ function TermsConditionsStep({
                 I would like to receive marketing communications (optional)
               </label>
               <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                Tick this box if you would like to receive promotional offers, product updates, and marketing materials from Emerald Green Energy and our trusted partners via email, phone, or SMS. You can unsubscribe at any time.
+                Tick this box if you would like to receive promotional offers, product updates, and marketing materials from HomePanel and our trusted partners via email, phone, or SMS. You can unsubscribe at any time.
               </p>
             </div>
           </div>

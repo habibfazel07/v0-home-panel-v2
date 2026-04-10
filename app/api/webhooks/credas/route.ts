@@ -75,31 +75,53 @@ export async function POST(request: Request) {
           ...updatedData,
           id_verification: {
             ...updatedData.id_verification,
-            started:      true,
-            completed:    true,
-            completed_at: now,
-            provider:     "credas",
-            status:       passed ? "approved" : "failed",
+            started:           true,
+            completed:         true,
+            completed_at:      now,
+            provider:          "credas",
+            status:            passed ? "approved" : "failed",
+            risk_level:        riskLevel,
+            aml_passed:        checks?.aml?.passed ?? false,
+            pep_match:         checks?.aml?.pepMatch ?? false,
+            sanctions_match:   checks?.aml?.sanctionsMatch ?? false,
+            identity_verified: checks?.identity?.passed ?? false,
+            address_verified:  checks?.address?.passed ?? false,
+          },
+          // Store raw Credas response for audit trail
+          credas_aml_raw_response: {
+            received_at:  now,
+            event:        event,
+            status:       status,
             risk_level:   riskLevel,
-            aml_passed:   checks?.aml?.passed ?? false,
-            pep_match:    checks?.aml?.pepMatch ?? false,
-            sanctions_match: checks?.aml?.sanctionsMatch ?? false,
+            checks:       checks,
+            invite_id:    inviteId,
+            reference_id: referenceId,
           },
         }
         activityAction      = "aml_check_completed"
-        activityDescription = `Credas AML check ${status}${riskLevel ? ` — ${riskLevel} risk` : ""}${checks?.aml?.pepMatch ? " — PEP MATCH" : ""}${checks?.aml?.sanctionsMatch ? " — SANCTIONS MATCH" : ""}`
+        activityDescription = `Credas AML check ${status}${riskLevel ? ` — ${riskLevel} risk` : ""}${checks?.aml?.pepMatch ? " — PEP MATCH" : ""}${checks?.aml?.sanctionsMatch ? " — SANCTIONS MATCH" : ""}${checks?.identity?.passed ? " — ID verified" : ""}`
       } else if (isSof) {
         updatedData = {
           ...updatedData,
           source_of_funds: {
             ...updatedData.source_of_funds,
-            started:      true,
-            completed:    true,
-            completed_at: now,
-            provider:     "credas",
-            status:       passed ? "approved" : "failed",
+            started:        true,
+            completed:      true,
+            completed_at:   now,
+            provider:       "credas",
+            status:         passed ? "approved" : "failed",
+            risk_level:     riskLevel,
+            sof_passed:     checks?.sof?.passed ?? false,
+          },
+          // Store raw Credas response for audit trail
+          credas_sof_raw_response: {
+            received_at:  now,
+            event:        event,
+            status:       status,
             risk_level:   riskLevel,
-            sof_passed:   checks?.sof?.passed ?? false,
+            checks:       checks,
+            invite_id:    inviteId,
+            reference_id: referenceId,
           },
         }
         activityAction      = "sof_check_completed"
