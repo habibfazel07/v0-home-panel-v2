@@ -105,7 +105,7 @@ export interface CredasWebhookPayload {
 function headers(): Record<string, string> {
   return {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${CREDAS_API_KEY}`,
+    "Authorization": `Basic ${CREDAS_API_KEY}`,
     "Accept": "application/json",
   }
 }
@@ -136,23 +136,23 @@ export async function sendCredasInvite(
   try {
     // Build request body per Credas API documentation
     // https://apisupport.credas.com/support/solutions/articles/44002478495-create-a-new-process-api
-    const requestBody = {
-      title: `HomePanel - ${request.checkType === "aml" ? "Identity Verification" : "Source of Funds"} - ${request.referenceId}`,
+    const requestBody: Record<string, unknown> = {
       journeyId: journeyId,
-      webhookUrl: request.webhookUrl || undefined,
       processEntities: [
         {
-          firstName: request.firstName,
+          actorId: actorId,
+          forename: request.firstName,
           surname: request.lastName,
           emailAddress: request.email,
-          phoneNumber: request.phone || undefined,
+          mobileNumber: request.phone || undefined,
           reference: request.referenceId,
-          actorId: actorId,
-          contactViaEmail: true,
-          contactViaSms: Boolean(request.phone),
-          inPerson: false,
         },
       ],
+    }
+    
+    // Only add webhookUrl if provided
+    if (request.webhookUrl) {
+      requestBody.webhookUrl = request.webhookUrl
     }
 
     console.log("[credas] Request body:", JSON.stringify(requestBody, null, 2))
