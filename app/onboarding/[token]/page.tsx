@@ -629,12 +629,12 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* ID Verification - Armalytix */}
+        {/* ID Verification - Credas */}
         {currentStep === "id-verification" && (
           <div className="space-y-8">
             <div>
               <h1 className="text-xl font-semibold tracking-tight mb-2">Identity Verification</h1>
-              <p className="text-muted-foreground text-sm">Verify your identity securely with Armalytix</p>
+              <p className="text-muted-foreground text-sm">Verify your identity securely with Credas</p>
             </div>
 
             <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
@@ -643,9 +643,9 @@ export default function OnboardingPage() {
                   <ShieldCheck className="h-7 w-7 text-[#6366F1]" />
                 </div>
                 <div>
-                  <p className="font-semibold mb-1">Armalytix Identity Service</p>
+                  <p className="font-semibold mb-1">Credas Identity Service</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Armalytix is our trusted partner for secure identity verification. You&apos;ll verify using your passport or driving licence.
+                    Credas is our trusted partner for secure identity verification. You&apos;ll verify using your passport or driving licence.
                   </p>
                 </div>
               </div>
@@ -655,7 +655,7 @@ export default function OnboardingPage() {
                 <ol className="text-sm text-muted-foreground space-y-1.5">
                   <li className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-foreground text-background text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
-                    Click the button below to open Armalytix in a new window
+                    Click the button below to open Credas in a new window
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-foreground text-background text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
@@ -675,7 +675,7 @@ export default function OnboardingPage() {
                 disabled={saving}
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Open Armalytix Identity Verification
+                Open Credas Identity Verification
                 <ExternalLink className="h-4 w-4 ml-2" />
               </Button>
             </div>
@@ -695,12 +695,12 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Source of Funds - Armalytix */}
+        {/* Source of Funds - Credas */}
         {currentStep === "source-of-funds" && (
           <div className="space-y-8">
             <div>
               <h1 className="text-xl font-semibold tracking-tight mb-2">Source of Funds</h1>
-              <p className="text-muted-foreground text-sm">Verify your source of funds with Armalytix</p>
+              <p className="text-muted-foreground text-sm">Verify your source of funds with Credas</p>
             </div>
 
             <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
@@ -709,9 +709,9 @@ export default function OnboardingPage() {
                   <Building2 className="h-7 w-7 text-[#6366F1]" />
                 </div>
                 <div>
-                  <p className="font-semibold mb-1">Armalytix Source of Funds Check</p>
+                  <p className="font-semibold mb-1">Credas Source of Funds Check</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Armalytix uses Open Banking to securely verify your funds. This is a legal requirement for anti-money laundering compliance.
+                    Credas uses Open Banking to securely verify your funds. This is a legal requirement for anti-money laundering compliance.
                   </p>
                 </div>
               </div>
@@ -721,7 +721,7 @@ export default function OnboardingPage() {
                 <ol className="text-sm text-muted-foreground space-y-1.5">
                   <li className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-foreground text-background text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
-                    Click the button below to open Armalytix
+                    Click the button below to open Credas
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="w-5 h-5 rounded-full bg-foreground text-background text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
@@ -741,7 +741,7 @@ export default function OnboardingPage() {
                 disabled={saving}
               >
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Open Armalytix Source of Funds Check
+                Open Credas Source of Funds Check
                 <ExternalLink className="h-4 w-4 ml-2" />
               </Button>
             </div>
@@ -890,7 +890,7 @@ export default function OnboardingPage() {
                       <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
                         <ShieldCheck className="h-4 w-4 text-accent" />
                       </div>
-                      <span className="text-sm">Identity Verification (Armalytix)</span>
+                      <span className="text-sm">Identity Verification (Credas)</span>
                     </div>
                     <span className="text-xs font-medium text-accent bg-accent/10 px-2 py-1 rounded-full">
                       Completed
@@ -901,7 +901,7 @@ export default function OnboardingPage() {
                       <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
                         <Building2 className="h-4 w-4 text-accent" />
                       </div>
-                      <span className="text-sm">Source of Funds Check (Armalytix)</span>
+                      <span className="text-sm">Source of Funds Check (Credas)</span>
                     </div>
                     <span className="text-xs font-medium text-accent bg-accent/10 px-2 py-1 rounded-full">
                       Completed

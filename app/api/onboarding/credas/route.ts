@@ -1,203 +1,122 @@
 /**
- * POST /api/webhooks/credas
+ * POST /api/onboarding/credas
  *
- * Receives event notifications from Credas when a check completes,
- * fails, or expires. Updates the enquiry's onboarding_data and
- * compliance status accordingly.
- *
- * Credas sends the header: X-Credas-Signature: sha256=<hmac>
- * Set CREDAS_WEBHOOK_SECRET in env to enable signature validation.
+ * Initiates a Credas AML or Source of Funds check for a client.
+ * Called from the client onboarding page when the user starts
+ * identity verification or source of funds verification.
  */
 
 import { NextResponse } from "next/server"
 import { createAdminClient, logActivity } from "@/lib/database"
-import { validateCredasWebhook, CredasWebhookPayload } from "@/lib/credas"
-
-const WEBHOOK_SECRET = process.env.CREDAS_WEBHOOK_SECRET || ""
+import { sendCredasInvite, isCredasConfigured } from "@/lib/credas"
 
 export async function POST(request: Request) {
-  const rawBody = await request.text()
-
-  // ── Signature validation ─────────────────────────────────────────
-  const signature = request.headers.get("x-credas-signature") || ""
-
-  if (WEBHOOK_SECRET && !validateCredasWebhook(rawBody, signature, WEBHOOK_SECRET)) {
-    console.error("[credas-webhook] Signature mismatch — rejecting request")
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
-  }
-
-  let payload: CredasWebhookPayload
   try {
-    payload = JSON.parse(rawBody)
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
-  }
+    const body = await request.json()
+    const { token, checkType } = body
 
-  const { event, inviteId, referenceId, status, riskLevel, checks, completedAt } = payload
-
-  console.log("[credas-webhook]", event, inviteId, referenceId, status)
-
-  const adminClient = createAdminClient()
-
-  // ── Find enquiry ─────────────────────────────────────────────────
-  const { data: enquiry, error: enquiryError } = await adminClient
-    .from("enquiries")
-    .select("*")
-    .eq("id", referenceId)
-    .single()
-
-  if (enquiryError || !enquiry) {
-    // Try lookup by invite ID stored in onboarding_data as fallback
-    console.error("[credas-webhook] Enquiry not found by referenceId:", referenceId)
-    return NextResponse.json({ error: "Enquiry not found" }, { status: 404 })
-  }
-
-  const onboardingData = enquiry.onboarding_data || {}
-  const now = completedAt || new Date().toISOString()
-
-  // ── Determine check type from which invite ID matches ────────────
-  const isAml = onboardingData.credas_aml_invite_id === inviteId
-  const isSof = onboardingData.credas_sof_invite_id === inviteId
-  const checkType = isAml ? "aml" : isSof ? "source_of_funds" : "unknown"
-
-  const passed  = status === "complete"
-  const failed  = status === "failed" || status === "expired"
-
-  // ── Build updated onboarding_data ────────────────────────────────
-  let updatedData = { ...onboardingData }
-  let activityAction: string
-  let activityDescription: string
-
-  switch (event) {
-    case "invite.completed": {
-      if (isAml) {
-        updatedData = {
-          ...updatedData,
-          id_verification: {
-            ...updatedData.id_verification,
-            started:      true,
-            completed:    true,
-            completed_at: now,
-            provider:     "credas",
-            status:       passed ? "approved" : "failed",
-            risk_level:   riskLevel,
-            aml_passed:   checks?.aml?.passed ?? false,
-            pep_match:    checks?.aml?.pepMatch ?? false,
-            sanctions_match: checks?.aml?.sanctionsMatch ?? false,
-          },
-        }
-        activityAction      = "aml_check_completed"
-        activityDescription = `Credas AML check ${status}${riskLevel ? ` — ${riskLevel} risk` : ""}${checks?.aml?.pepMatch ? " — PEP MATCH" : ""}${checks?.aml?.sanctionsMatch ? " — SANCTIONS MATCH" : ""}`
-      } else if (isSof) {
-        updatedData = {
-          ...updatedData,
-          source_of_funds: {
-            ...updatedData.source_of_funds,
-            started:      true,
-            completed:    true,
-            completed_at: now,
-            provider:     "credas",
-            status:       passed ? "approved" : "failed",
-            risk_level:   riskLevel,
-            sof_passed:   checks?.sof?.passed ?? false,
-          },
-        }
-        activityAction      = "sof_check_completed"
-        activityDescription = `Credas source of funds check ${status}${riskLevel ? ` — ${riskLevel} risk` : ""}`
-      } else {
-        // Unknown invite ID — still log it
-        activityAction      = "credas_check_completed"
-        activityDescription = `Credas check completed (invite ${inviteId}) — status: ${status}`
-      }
-      break
+    if (!token) {
+      return NextResponse.json({ error: "Token required" }, { status: 400 })
     }
 
-    case "invite.failed":
-    case "invite.expired": {
-      // Mark the relevant step as failed so the UI can prompt retry
-      if (isAml) {
-        updatedData = {
-          ...updatedData,
-          id_verification: {
-            ...updatedData.id_verification,
-            completed:  false,
-            status:     event === "invite.expired" ? "expired" : "failed",
-            provider:   "credas",
-          },
-        }
-      } else if (isSof) {
-        updatedData = {
-          ...updatedData,
-          source_of_funds: {
-            ...updatedData.source_of_funds,
-            completed:  false,
-            status:     event === "invite.expired" ? "expired" : "failed",
-            provider:   "credas",
-          },
-        }
-      }
-      activityAction      = "credas_check_failed"
-      activityDescription = `Credas invite ${event.replace("invite.", "")} — invite ID: ${inviteId}`
-      break
+    if (!checkType || !["aml", "source_of_funds"].includes(checkType)) {
+      return NextResponse.json({ error: "Invalid check type. Must be 'aml' or 'source_of_funds'" }, { status: 400 })
     }
 
-    case "check.updated": {
-      // Intermediate progress update — just log it
-      activityAction      = "credas_check_updated"
-      activityDescription = `Credas check update received — ${checkType} — status: ${status}`
-      break
+    const adminClient = createAdminClient()
+
+    // Verify token and get enquiry
+    const { data: enquiry, error: enquiryError } = await adminClient
+      .from("enquiries")
+      .select("*")
+      .eq("onboarding_token", token)
+      .single()
+
+    if (enquiryError || !enquiry) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 404 })
     }
 
-    default: {
-      activityAction      = "credas_event_received"
-      activityDescription = `Credas unknown event: ${event}`
-    }
-  }
+    // Get onboarding data
+    const onboardingData = enquiry.onboarding_data || {}
 
-  // ── Persist updated onboarding_data ──────────────────────────────
-  const { error: updateError } = await adminClient
-    .from("enquiries")
-    .update({
-      onboarding_data: updatedData,
-      updated_at: now,
+    // Check if we already have a Credas invite for this check type
+    const existingInviteKey = checkType === "aml" ? "credas_aml_invite_id" : "credas_sof_invite_id"
+    const existingUrlKey = checkType === "aml" ? "credas_aml_invite_url" : "credas_sof_invite_url"
+    
+    if (onboardingData[existingInviteKey] && onboardingData[existingUrlKey]) {
+      // Return existing invite URL
+      return NextResponse.json({
+        success: true,
+        inviteId: onboardingData[existingInviteKey],
+        inviteUrl: onboardingData[existingUrlKey],
+        existing: true,
+      })
+    }
+
+    // Build webhook URL for Credas to call back
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
+      || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null)
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+      || "https://v0-home-panel-v2.vercel.app"
+    
+    const webhookUrl = `${baseUrl}/api/webhooks/credas`
+    const redirectUrl = `${baseUrl}/onboarding/${token}?step=${checkType === "aml" ? "id-verification" : "source-of-funds"}&completed=true`
+
+    // Send Credas invite
+    const inviteResponse = await sendCredasInvite({
+      firstName: enquiry.first_name,
+      lastName: enquiry.last_name,
+      email: enquiry.email,
+      phone: enquiry.phone,
+      checkType: checkType as "aml" | "source_of_funds",
+      referenceId: enquiry.id,
+      webhookUrl,
+      redirectUrl,
     })
-    .eq("id", enquiry.id)
 
-  if (updateError) {
-    console.error("[credas-webhook] Failed to update enquiry:", updateError)
-    return NextResponse.json({ error: "Failed to update enquiry" }, { status: 500 })
-  }
+    if (!inviteResponse.success) {
+      console.error("[credas] Failed to create invite:", inviteResponse.error)
+      return NextResponse.json(
+        { error: inviteResponse.error || "Failed to create Credas invite" },
+        { status: 500 }
+      )
+    }
 
-  // ── Check if all required steps are now complete ──────────────────
-  const amlDone = updatedData.id_verification?.completed === true
-  const sofDone = updatedData.source_of_funds?.completed === true
+    // Store invite ID in onboarding data
+    const updatedOnboardingData = {
+      ...onboardingData,
+      [existingInviteKey]: inviteResponse.inviteId,
+      [existingUrlKey]: inviteResponse.inviteUrl,
+    }
 
-  if (amlDone && sofDone) {
-    // Both checks passed — mark onboarding as compliance-complete
     await adminClient
       .from("enquiries")
       .update({
-        onboarding_status: "compliance_complete",
-        updated_at: now,
+        onboarding_data: updatedOnboardingData,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", enquiry.id)
 
+    // Log activity
     await logActivity({
-      enquiryId:   enquiry.id,
-      actorType:   "webhook",
-      action:      "onboarding_compliance_complete",
-      description: "All Credas checks passed — onboarding marked compliance complete",
+      enquiryId: enquiry.id,
+      actorType: "client",
+      action: "aml_check_initiated",
+      description: `Credas ${checkType === "aml" ? "AML/ID verification" : "source of funds"} check initiated`,
+      metadata: {
+        provider: "credas",
+        inviteId: inviteResponse.inviteId,
+        checkType,
+      },
     })
+
+    return NextResponse.json({
+      success: true,
+      inviteId: inviteResponse.inviteId,
+      inviteUrl: inviteResponse.inviteUrl,
+    })
+  } catch (error) {
+    console.error("[credas] API error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-
-  // ── Activity log ─────────────────────────────────────────────────
-  await logActivity({
-    enquiryId:   enquiry.id,
-    actorType:   "webhook",
-    action:      activityAction,
-    description: activityDescription,
-  })
-
-  // Always return 200 to Credas so they don't retry
-  return NextResponse.json({ received: true })
 }

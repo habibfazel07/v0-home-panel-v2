@@ -1,7 +1,7 @@
 /**
  * HomePanel v2 - Compliance Types
  * Type definitions for AML, KYC, and compliance workflows
- * Provider-agnostic abstractions for Armalytix, Yoti, Onfido, etc.
+ * Provider-agnostic abstractions for Credas, Yoti, Onfido, etc.
  */
 
 // AML Status values
@@ -23,7 +23,7 @@ export type RiskLevel = (typeof RISK_LEVELS)[number]
 
 // Compliance providers
 export const PROVIDERS = {
-  ARMALYTIX: "armalytix",
+  CREDAS: "credas",
   YOTI: "yoti",
   ONFIDO: "onfido",
   MANUAL: "manual",

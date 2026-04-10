@@ -146,11 +146,11 @@ export async function POST(
         
         // Create or update compliance check record
         if (data.completed) {
-          await upsertComplianceCheck(enquiry.id, "identity_verification", "yoti", {
+          await upsertComplianceCheck(enquiry.id, "identity_verification", "credas", {
             status: "completed",
             completed_at: data.completed_at,
             summary_json: {
-              provider: "yoti",
+              provider: "credas",
               client_marked_complete: true,
               awaiting_provider_result: true
             }
@@ -165,11 +165,11 @@ export async function POST(
         
         // Create or update compliance check record
         if (data.completed) {
-          await upsertComplianceCheck(enquiry.id, "source_of_funds", "armalytix", {
+          await upsertComplianceCheck(enquiry.id, "source_of_funds", "credas", {
             status: "completed",
             completed_at: data.completed_at,
             summary_json: {
-              provider: "armalytix",
+              provider: "credas",
               client_marked_complete: true,
               awaiting_provider_result: true
             }
